@@ -475,6 +475,26 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
           <div id="set-status" style="margin-top:10px;text-align:center;font-size:12px;color:var(--green);font-weight:600;display:none;">✓ Saved! All screens updated.</div>
         </div>
 
+        <!-- Export / Import -->
+        <div class="card card-pad" style="margin-bottom:14px;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">💾 Export / Import Data</div>
+          <div style="font-size:11px;color:var(--text3);line-height:1.7;margin-bottom:14px;">
+            Export your journal to a JSON file and import it on any device — even without cloud sync.
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <button onclick="exportData()"
+              style="padding:12px;background:var(--green-dim);border:1px solid #1A4A2A;border-radius:10px;color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">
+              ⬇️ Export JSON
+            </button>
+            <button onclick="document.getElementById('import-file').click()"
+              style="padding:12px;background:var(--card2);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">
+              ⬆️ Import JSON
+            </button>
+          </div>
+          <input id="import-file" type="file" accept=".json" style="display:none" onchange="importData(this)"/>
+          <div id="import-status" style="font-size:11px;margin-top:10px;color:var(--green);min-height:16px;"></div>
+        </div>
+
         <!-- Danger zone -->
         <div class="card card-pad" style="border-color:#4A1A1A;">
           <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:12px;">⚠️ Danger Zone</div>
@@ -3874,6 +3894,53 @@ function applySettings(){
   if(document.getElementById('screen-plan').classList.contains('active'))   renderPlan();
   if(document.getElementById('screen-stats').classList.contains('active'))  renderStats();
   if(document.getElementById('screen-growth').classList.contains('active')) renderGrowth();
+}
+
+function exportData(){
+  const data = {
+    journal,
+    settings: { initialCapital:INITIAL_CAPITAL, target:TARGET, userName:USER_NAME },
+    exportedAt: new Date().toISOString(),
+    version: 1
+  };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'trade-journal-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ Journal exported!');
+}
+
+function importData(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = JSON.parse(e.target.result);
+      if(data.journal){
+        journal = {...journal, ...data.journal};
+        saveJournal();
+      }
+      if(data.settings){
+        if(data.settings.initialCapital) INITIAL_CAPITAL = data.settings.initialCapital;
+        if(data.settings.target)         TARGET           = data.settings.target;
+        if(data.settings.userName)       USER_NAME        = data.settings.userName;
+        try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(data.settings)); }catch(ex){}
+      }
+      renderTopStats(); renderCalendar(); renderRecent();
+      const days = Object.keys(data.journal||{}).length;
+      document.getElementById('import-status').textContent = '✅ Imported ' + days + ' trading days successfully!';
+      showToast('✅ Imported ' + days + ' days!');
+    }catch(ex){
+      document.getElementById('import-status').textContent = '❌ Invalid file. Please export a valid backup first.';
+      document.getElementById('import-status').style.color = 'var(--red)';
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
 }
 
 function clearAllData(){
