@@ -141,7 +141,7 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
       <div style="display:flex;align-items:center;gap:8px;">
         <div id="top-stats" style="display:flex;gap:8px;"></div>
         <button id="auth-btn" onclick="currentUser ? signOut() : showAuthModal()"
-          style="padding:7px 14px;background:var(--gold-dim);border:1px solid var(--gold-dim);border-radius:20px;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);letter-spacing:0.3px;white-space:nowrap;">
+          style="padding:10px 18px;background:var(--gold);border:none;border-radius:20px;color:#0A0A12;font-size:12px;font-weight:800;cursor:pointer;font-family:var(--font);letter-spacing:0.3px;white-space:nowrap;min-height:40px;-webkit-tap-highlight-color:transparent;">
           Sign In
         </button>
       </div>
@@ -728,20 +728,26 @@ function updateAuthUI(){
 async function signOut(){
   try{
     const sb = await getSB();
-    if(sb) await sb.auth.signOut({ scope: 'global' });
-  }catch(e){ console.warn('signOut error',e); }
-  // Clear ALL supabase session data from storage
+    if(sb) await sb.auth.signOut({scope:'global'});
+  }catch(e){ console.warn('signOut',e); }
+  // Nuke ALL supabase keys from every storage
   try{
-    Object.keys(localStorage).forEach(k=>{
-      if(k.includes('supabase') || k.includes('sb-')) localStorage.removeItem(k);
-    });
-    Object.keys(sessionStorage||{}).forEach(k=>{
-      if(k.includes('supabase') || k.includes('sb-')) sessionStorage.removeItem(k);
+    const keys = Object.keys(localStorage).filter(k=>k.includes('supabase')||k.includes('sb-')||k.includes('gotrue'));
+    keys.forEach(k=>localStorage.removeItem(k));
+  }catch(e){}
+  try{
+    const keys = Object.keys(sessionStorage).filter(k=>k.includes('supabase')||k.includes('sb-')||k.includes('gotrue'));
+    keys.forEach(k=>sessionStorage.removeItem(k));
+  }catch(e){}
+  // Clear cookies
+  try{
+    document.cookie.split(';').forEach(c=>{
+      document.cookie = c.trim().split('=')[0]+'=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
     });
   }catch(e){}
   currentUser = null;
-  showToast('Signed out ✓ Reloading...');
-  setTimeout(()=>{ window.location.href = window.location.href.split('?')[0]; }, 800);
+  showToast('Signed out ✓');
+  setTimeout(()=>{ window.location.href = window.location.pathname + '?signedout=' + Date.now(); }, 600);
 }
 
 async function syncToCloud(){
@@ -797,11 +803,12 @@ function showToast(msg,dur=2500){
 
 function showAuthModal(){
   const m = document.getElementById('auth-modal');
-  if(m){ m.style.display='flex'; m.style.webkitDisplay='flex'; }
+  if(!m) return;
+  m.style.cssText = 'display:flex;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);';
 }
 function hideAuthModal(){
   const m = document.getElementById('auth-modal');
-  if(m) m.style.display='none';
+  if(m) m.style.display = 'none';
 }
 
 async function handleAuthSubmit(mode){
