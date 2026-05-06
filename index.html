@@ -512,8 +512,12 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
             Checking...
           </div>
           <button id="settings-auth-btn" onclick="handleSettingsAuth()"
-            style="width:100%;padding:13px;background:var(--blue);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);">
+            style="width:100%;padding:13px;background:var(--blue);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);margin-bottom:8px;">
             Sign In to Sync
+          </button>
+          <button onclick="syncFromCloud()"
+            style="width:100%;padding:11px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);color:var(--text2);">
+            ☁️ Force Sync from Cloud
           </button>
         </div>
       </div>
@@ -764,14 +768,19 @@ async function syncToCloud(){
 }
 
 async function syncFromCloud(){
+  if(!currentUser) return;
   const sb=await getSB(); if(!sb) return;
   try{
+    showToast('⏳ Loading from cloud...');
     const {data,error}=await sb.from('trade_journals').select('*').eq('user_id',currentUser.id).single();
-    if(error||!data) return;
+    if(error||!data){ showToast('No cloud data found'); return; }
     if(data.journal){
       const cloud=JSON.parse(data.journal);
-      journal={...journal,...cloud};
-      try{localStorage.setItem(STORAGE_KEY,JSON.stringify(journal));}catch(e){}
+      const cloudCount = Object.keys(cloud).length;
+      if(cloudCount > 0){
+        journal = cloud; // Replace local with cloud data
+        try{localStorage.setItem(STORAGE_KEY,JSON.stringify(journal));}catch(e){}
+      }
     }
     if(data.settings){
       const s=JSON.parse(data.settings);
@@ -780,9 +789,10 @@ async function syncFromCloud(){
       if(s.userName) USER_NAME=s.userName;
       try{localStorage.setItem(SETTINGS_KEY,data.settings);}catch(e){}
     }
-    renderTopStats(); renderCalendar();
-    showToast('&#9729; Synced from cloud');
-  }catch(e){ console.warn('Cloud fetch failed',e.message); }
+    const days = Object.keys(journal).length;
+    renderTopStats(); renderCalendar(); renderRecent();
+    showToast('✅ Loaded '+days+' trading days from cloud!', 3000);
+  }catch(e){ showToast('❌ Sync failed: '+e.message); console.warn('Cloud fetch failed',e); }
 }
 
 function saveJournal(){
