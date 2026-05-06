@@ -676,7 +676,7 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
 //  supabase.com → Project → Settings → API
 // ======================================================
 const SUPABASE_URL = 'https://opofpsnwwiexdgrfnxts.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_1S6r-sQVai3Iamn9aa_l6g_RHGRY-Dk';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wb2Zwc253d2lleGRncmZueHRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjg3NTAsImV4cCI6MjA5MzY0NDc1MH0.K_tgXvI9QwxFxk_eS3i4BQwG0_Er8aQdwg5lRrjCzXY';
 
 let _sb = null;
 async function getSB(){
@@ -769,35 +769,50 @@ async function syncToCloud(){
 
 async function syncFromCloud(){
   if(!currentUser) return;
-  const sb=await getSB(); if(!sb) return;
+  showToast('⏳ Syncing from cloud...');
   try{
-    showToast('⏳ Loading from cloud...');
-    const {data,error}=await sb.from('trade_journals').select('*').eq('user_id',currentUser.id).single();
-    if(error||!data){ showToast('No cloud data found'); return; }
-    if(data.journal){
-      const cloud=JSON.parse(data.journal);
-      const cloudCount = Object.keys(cloud).length;
-      if(cloudCount > 0){
-        journal = cloud; // Replace local with cloud data
-        try{localStorage.setItem(STORAGE_KEY,JSON.stringify(journal));}catch(e){}
+    // Try Supabase client first
+    const sb = await getSB();
+    if(sb){
+      const {data,error} = await sb
+        .from('trade_journals')
+        .select('journal,settings')
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if(!error && data){
+        if(data.journal){
+          const cloud = JSON.parse(data.journal);
+          const days = Object.keys(cloud).length;
+          if(days > 0){
+            journal = cloud;
+            try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(journal)); }catch(e){}
+            if(data.settings){
+              const s = JSON.parse(data.settings);
+              if(s.initialCapital) INITIAL_CAPITAL = s.initialCapital;
+              if(s.target) TARGET = s.target;
+              if(s.userName) USER_NAME = s.userName;
+              try{ localStorage.setItem(SETTINGS_KEY, data.settings); }catch(e){}
+            }
+            renderTopStats(); renderCalendar(); renderRecent();
+            showToast('✅ Loaded ' + days + ' trading days!', 3000);
+            return;
+          }
+        }
+        showToast('⚠️ No data in cloud yet');
+        return;
       }
     }
-    if(data.settings){
-      const s=JSON.parse(data.settings);
-      if(s.initialCapital) INITIAL_CAPITAL=s.initialCapital;
-      if(s.target) TARGET=s.target;
-      if(s.userName) USER_NAME=s.userName;
-      try{localStorage.setItem(SETTINGS_KEY,data.settings);}catch(e){}
-    }
-    const days = Object.keys(journal).length;
-    renderTopStats(); renderCalendar(); renderRecent();
-    showToast('✅ Loaded '+days+' trading days from cloud!', 3000);
-  }catch(e){ showToast('❌ Sync failed: '+e.message); console.warn('Cloud fetch failed',e); }
+    showToast('❌ Sync failed - check connection');
+  }catch(e){
+    console.error('Sync error:', e);
+    showToast('❌ Error: ' + e.message);
+  }
 }
 
 function saveJournal(){
-  try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(journal)); }catch(e){}
-  syncToCloud();
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(journal)); }catch(e){}
+  if(currentUser) syncToCloud();
 }
 
 function showToast(msg,dur=2500){
