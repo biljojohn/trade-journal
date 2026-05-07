@@ -569,48 +569,30 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
 </div><!-- /app -->
 
 <!-- ══ AUTH MODAL ══ -->
-<div id="auth-modal" style="position:fixed;inset:0;z-index:1001;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);">
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:22px;padding:28px 24px;max-width:340px;width:92%;box-shadow:0 24px 48px rgba(0,0,0,0.4);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <div style="font-family:var(--head);font-size:20px;font-weight:700;color:var(--gold);">Trade Journal</div>
-      <button onclick="hideAuthModal()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:4px;">✕</button>
+<div id="auth-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:22px;padding:32px 24px;max-width:320px;width:92%;box-shadow:0 24px 48px rgba(0,0,0,0.5);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <div style="font-family:var(--head);font-size:22px;font-weight:700;color:var(--gold);">Trade Journal</div>
+      <button onclick="hideAuthModal()" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:4px;line-height:1;">&#10005;</button>
     </div>
-
-    <!-- Tabs -->
-    <div style="display:flex;gap:4px;background:var(--card2);border-radius:12px;padding:4px;margin-bottom:20px;">
-      <button id="tab-signin" onclick="document.getElementById('tab-signin').style.background='var(--card)';document.getElementById('tab-signup').style.background='transparent';document.getElementById('auth-submit-btn').textContent='Sign In';document.getElementById('auth-submit-btn').onclick=()=>handleAuthSubmit('signin');"
-        style="flex:1;padding:9px;border-radius:9px;border:none;background:var(--card);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">Sign In</button>
-      <button id="tab-signup" onclick="document.getElementById('tab-signup').style.background='var(--card)';document.getElementById('tab-signin').style.background='transparent';document.getElementById('auth-submit-btn').textContent='Create Account';document.getElementById('auth-submit-btn').onclick=()=>handleAuthSubmit('signup');"
-        style="flex:1;padding:9px;border-radius:9px;border:none;background:transparent;color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">Sign Up</button>
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:40px;margin-bottom:12px;">&#128202;</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;">Sign in to sync your data</div>
+      <div style="font-size:12px;color:var(--text3);line-height:1.6;">Your trades sync across all devices.<br/>Each person gets their own private data.</div>
     </div>
-
-    <!-- Email/Password -->
-    <div style="margin-bottom:12px;">
-      <input id="auth-email" type="email" placeholder="Email address"
-        style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:16px;color:var(--text);outline:none;margin-bottom:8px;"
-        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"
-        onkeydown="if(event.key==='Enter')document.getElementById('auth-pass').focus()"/>
-      <input id="auth-pass" type="password" placeholder="Password"
-        style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:16px;color:var(--text);outline:none;"
-        onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"
-        onkeydown="if(event.key==='Enter')handleAuthSubmit('signin')"/>
-    </div>
-    <div id="auth-error" style="font-size:11px;color:var(--red);min-height:16px;margin-bottom:10px;"></div>
-
-    <button id="auth-submit-btn" onclick="handleAuthSubmit('signin')"
-      style="width:100%;padding:13px;background:var(--gold);color:#0A0A12;border:none;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;font-family:var(--font);margin-bottom:10px;">
-      Sign In
-    </button>
-
-    <!-- Google -->
+    <div id="auth-error" style="font-size:11px;color:var(--red);min-height:16px;margin-bottom:10px;text-align:center;"></div>
     <button onclick="signInWithGoogle()"
-      style="width:100%;padding:12px;background:var(--card);border:1px solid var(--border2);border-radius:12px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:8px;">
-      <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      style="width:100%;padding:14px;background:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;color:#1a1a1a;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:10px;-webkit-tap-highlight-color:transparent;">
+      <svg width="20" height="20" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
       Continue with Google
     </button>
-
     <div style="font-size:10px;color:var(--text3);text-align:center;margin-top:14px;line-height:1.7;">
-      Your trading data is encrypted and stored securely.<br/>Works across all your devices when signed in.
+      Free &#183; Private &#183; Works on iPhone, Mac &amp; any device
     </div>
   </div>
 </div>
@@ -672,142 +654,138 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
 
 <script>
 // ======================================================
-//  SUPABASE CONFIG — fill these in after setup
-//  supabase.com → Project → Settings → API
+//  FIREBASE CONFIG
 // ======================================================
-const SUPABASE_URL = 'https://opofpsnwwiexdgrfnxts.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wb2Zwc253d2lleGRncmZueHRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjg3NTAsImV4cCI6MjA5MzY0NDc1MH0.K_tgXvI9QwxFxk_eS3i4BQwG0_Er8aQdwg5lRrjCzXY';
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDNT6ySPH3ype9lJ7qQPw2U9C06PkpcVlI",
+  authDomain: "trade-journal-7fb55.firebaseapp.com",
+  projectId: "trade-journal-7fb55",
+  storageBucket: "trade-journal-7fb55.firebasestorage.app",
+  messagingSenderId: "15484923705",
+  appId: "1:15484923705:web:d3ffcae3fb6f68f0b582e8"
+};
 
-let _sb = null;
-async function getSB(){
-  if(_sb) return _sb;
-  if(!SUPABASE_URL||!SUPABASE_KEY) return null;
-  try{
-    // Support both new sb_publishable_ keys and legacy eyJ anon keys
-    const {createClient} = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-    _sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
-      }
-    });
-  }catch(e){ console.warn('Supabase load failed',e); return null; }
-  return _sb;
-}
-
+let _firebaseApp = null, _db = null, _auth = null;
 let currentUser = null;
 
+async function getFirebase(){
+  if(_db && _auth) return {db:_db, auth:_auth};
+  try{
+    const {initializeApp, getApps} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    const {getFirestore, doc, setDoc, getDoc} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    const {getAuth, onAuthStateChanged, signInWithPopup, signOut:fbSignOut, GoogleAuthProvider} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+    _firebaseApp = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
+    _db   = getFirestore(_firebaseApp);
+    _auth = getAuth(_firebaseApp);
+    window._fbModules = {doc, setDoc, getDoc, onAuthStateChanged, signInWithPopup, fbSignOut, GoogleAuthProvider};
+    return {db:_db, auth:_auth};
+  }catch(e){ console.warn('Firebase load failed',e); return null; }
+}
+
 async function initAuth(){
-  const sb = await getSB();
-  if(!sb) return;
-  sb.auth.onAuthStateChange(async (event, session)=>{
-    currentUser = session?.user||null;
+  const fb = await getFirebase();
+  if(!fb) return;
+  const {onAuthStateChanged} = window._fbModules;
+  onAuthStateChanged(fb.auth, async user=>{
+    currentUser = user;
     updateAuthUI();
     if(currentUser) await syncFromCloud();
   });
-  const {data:{session}} = await sb.auth.getSession();
-  currentUser = session?.user||null;
-  updateAuthUI();
-  if(currentUser) await syncFromCloud();
 }
 
 function updateAuthUI(){
   const navBtn = document.getElementById('auth-btn-nav');
   const navDot = document.getElementById('nav-sync-dot');
   const sync   = document.getElementById('sync-status');
-
+  const topBtn = document.getElementById('auth-btn');
   if(currentUser){
-    if(sync) sync.innerHTML='<span style="color:var(--green);">&#9729; '+currentUser.email+'</span>';
+    const name = currentUser.displayName || currentUser.email;
+    if(sync)   sync.innerHTML='<span style="color:var(--green);">&#9729; '+name+'</span>';
     if(navBtn){ navBtn.textContent='Sign Out'; navBtn.style.background='rgba(34,197,94,0.1)'; navBtn.style.borderColor='rgba(34,197,94,0.3)'; navBtn.style.color='var(--green)'; }
     if(navDot){ navDot.style.background='var(--green)'; }
+    if(topBtn){ topBtn.textContent='Sign Out'; topBtn.style.background='rgba(34,197,94,0.1)'; topBtn.style.color='var(--green)'; topBtn.style.border='1px solid rgba(34,197,94,0.3)'; }
   } else {
-    if(sync) sync.innerHTML='<span style="color:var(--text3);">&#128274; Local only</span>';
+    if(sync)   sync.innerHTML='<span style="color:var(--text3);">&#128274; Local only</span>';
     if(navBtn){ navBtn.textContent='Sign In'; navBtn.style.background='var(--gold-dim)'; navBtn.style.borderColor='rgba(245,200,66,0.3)'; navBtn.style.color='var(--gold)'; }
     if(navDot){ navDot.style.background='var(--text3)'; }
+    if(topBtn){ topBtn.textContent='Sign In'; topBtn.style.background='var(--gold)'; topBtn.style.color='#0A0A12'; topBtn.style.border='none'; }
   }
   refreshSettingsAuth();
 }
 
+async function signInWithGoogle(){
+  const fb = await getFirebase();
+  if(!fb){ showToast('Firebase not loaded'); return; }
+  const {signInWithPopup, GoogleAuthProvider} = window._fbModules;
+  try{
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(fb.auth, provider);
+    hideAuthModal();
+    showToast('Signed in with Google ✓');
+  }catch(e){
+    console.warn('Google sign in error', e);
+    document.getElementById('auth-error').textContent = e.message;
+  }
+}
+
 async function signOut(){
   try{
-    const sb = await getSB();
-    if(sb) await sb.auth.signOut({scope:'global'});
+    const fb = await getFirebase();
+    if(fb){ const {fbSignOut} = window._fbModules; await fbSignOut(fb.auth); }
   }catch(e){ console.warn('signOut',e); }
-  // Nuke ALL supabase keys from every storage
-  try{
-    const keys = Object.keys(localStorage).filter(k=>k.includes('supabase')||k.includes('sb-')||k.includes('gotrue'));
-    keys.forEach(k=>localStorage.removeItem(k));
-  }catch(e){}
-  try{
-    const keys = Object.keys(sessionStorage).filter(k=>k.includes('supabase')||k.includes('sb-')||k.includes('gotrue'));
-    keys.forEach(k=>sessionStorage.removeItem(k));
-  }catch(e){}
-  // Clear cookies
-  try{
-    document.cookie.split(';').forEach(c=>{
-      document.cookie = c.trim().split('=')[0]+'=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
-    });
-  }catch(e){}
   currentUser = null;
+  updateAuthUI();
   showToast('Signed out ✓');
-  setTimeout(()=>{ window.location.href = window.location.pathname + '?signedout=' + Date.now(); }, 600);
+  setTimeout(()=>{ window.location.href = window.location.pathname+'?t='+Date.now(); }, 600);
 }
 
 async function syncToCloud(){
   if(!currentUser) return;
-  const sb=await getSB(); if(!sb) return;
+  const fb = await getFirebase();
+  if(!fb) return;
   try{
-    await sb.from('trade_journals').upsert({
-      user_id: currentUser.id,
-      journal: JSON.stringify(journal),
+    const {doc, setDoc} = window._fbModules;
+    await setDoc(doc(fb.db,'journals',currentUser.uid),{
+      journal:  JSON.stringify(journal),
       settings: JSON.stringify({initialCapital:INITIAL_CAPITAL,target:TARGET,userName:USER_NAME}),
-      updated_at: new Date().toISOString()
-    },{onConflict:'user_id'});
+      updatedAt: new Date().toISOString()
+    });
+    showToast('☁️ Saved to cloud');
   }catch(e){ console.warn('Sync failed',e.message); }
 }
 
 async function syncFromCloud(){
   if(!currentUser) return;
-  showToast('⏳ Syncing from cloud...');
+  const fb = await getFirebase();
+  if(!fb) return;
   try{
-    // Try Supabase client first
-    const sb = await getSB();
-    if(sb){
-      const {data,error} = await sb
-        .from('trade_journals')
-        .select('journal,settings')
-        .eq('user_id', currentUser.id)
-        .single();
-
-      if(!error && data){
-        if(data.journal){
-          const cloud = JSON.parse(data.journal);
-          const days = Object.keys(cloud).length;
-          if(days > 0){
-            journal = cloud;
-            try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(journal)); }catch(e){}
-            if(data.settings){
-              const s = JSON.parse(data.settings);
-              if(s.initialCapital) INITIAL_CAPITAL = s.initialCapital;
-              if(s.target) TARGET = s.target;
-              if(s.userName) USER_NAME = s.userName;
-              try{ localStorage.setItem(SETTINGS_KEY, data.settings); }catch(e){}
-            }
-            renderTopStats(); renderCalendar(); renderRecent();
-            showToast('✅ Loaded ' + days + ' trading days!', 3000);
-            return;
-          }
-        }
-        showToast('⚠️ No data in cloud yet');
-        return;
+    showToast('⏳ Loading from cloud...');
+    const {doc, getDoc} = window._fbModules;
+    const snap = await getDoc(doc(fb.db,'journals',currentUser.uid));
+    if(!snap.exists()){
+      showToast('No cloud data yet — upload your CSV!');
+      return;
+    }
+    const data = snap.data();
+    if(data.journal){
+      const cloud = JSON.parse(data.journal);
+      const days = Object.keys(cloud).length;
+      if(days>0){
+        journal = cloud;
+        try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(journal)); }catch(e){}
       }
     }
-    showToast('❌ Sync failed - check connection');
-  }catch(e){
-    console.error('Sync error:', e);
-    showToast('❌ Error: ' + e.message);
-  }
+    if(data.settings){
+      const s = JSON.parse(data.settings);
+      if(s.initialCapital) INITIAL_CAPITAL = s.initialCapital;
+      if(s.target)         TARGET           = s.target;
+      if(s.userName)       USER_NAME        = s.userName;
+      try{ localStorage.setItem(SETTINGS_KEY, data.settings); }catch(e){}
+    }
+    const days = Object.keys(journal).length;
+    renderTopStats(); renderCalendar(); renderRecent();
+    showToast('✅ Loaded '+days+' trading days!', 3000);
+  }catch(e){ console.warn('Cloud fetch failed',e); showToast('❌ Sync failed: '+e.message); }
 }
 
 function saveJournal(){
@@ -829,35 +807,21 @@ function showToast(msg,dur=2500){
 function showAuthModal(){
   const m = document.getElementById('auth-modal');
   if(!m) return;
-  m.style.cssText = 'display:flex;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);';
+  m.style.cssText='display:flex;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);';
 }
 function hideAuthModal(){
   const m = document.getElementById('auth-modal');
-  if(m) m.style.display = 'none';
+  if(m) m.style.display='none';
 }
 
 async function handleAuthSubmit(mode){
-  const email=document.getElementById('auth-email').value.trim();
-  const pass =document.getElementById('auth-pass').value;
-  const errEl=document.getElementById('auth-error');
-  const btn  =document.getElementById('auth-submit-btn');
-  if(!email||!pass){errEl.textContent='Enter email and password.';return;}
-  btn.disabled=true; btn.textContent='Please wait...'; errEl.textContent='';
-  const sb=await getSB();
-  if(!sb){ errEl.textContent='Supabase not configured. See Settings.'; btn.disabled=false; btn.textContent=mode==='signup'?'Create Account':'Sign In'; return; }
-  const {error}=mode==='signup'
-    ? await sb.auth.signUp({email,password:pass})
-    : await sb.auth.signInWithPassword({email,password:pass});
-  btn.disabled=false; btn.textContent=mode==='signup'?'Create Account':'Sign In';
-  if(error){ errEl.textContent=error.message; }
-  else{ hideAuthModal(); showToast(mode==='signup'?'Check your email to verify account':'Signed in ✓'); }
+  // With Firebase we only use Google sign in
+  signInWithGoogle();
 }
 
-async function signInWithGoogle(){
-  const sb=await getSB(); if(!sb) return;
-  await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href}});
-}
-
+// ======================================================
+//  STATE
+// ======================================================
 // ======================================================
 //  STATE
 // ======================================================
