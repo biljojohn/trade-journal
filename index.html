@@ -408,6 +408,13 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
         <div id="analytics-content"></div>
       </div>
     </div>
+    <!-- ══ SCREEN 8: HIGHLIGHTS ══ -->
+    <div class="screen" id="screen-highlights">
+      <div style="padding:16px 14px;">
+        <div id="highlights-content"></div>
+      </div>
+    </div>
+
     <div class="screen" id="screen-settings">
       <div style="padding:16px 14px;max-width:540px;margin:0 auto;">
         <div class="section-label">Account Settings</div>
@@ -554,6 +561,10 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
     <button class="nav-item" onclick="showScreen('analytics',this)">
       <span class="nav-icon">🔬</span>
       <span class="nav-label">Analysis</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('highlights',this)">
+      <span class="nav-icon">📌</span>
+      <span class="nav-label">Highlights</span>
     </button>
 
     <!-- Auth button - visible on desktop sidebar -->
@@ -930,9 +941,10 @@ function showScreen(name, btn) {
   if(name==='journal') renderCalendar();
   if(name==='plan') renderPlan();
   if(name==='stats') renderStats();
-  if(name==='growth') renderGrowth();
-  if(name==='analytics') renderAnalytics();
-  if(name==='settings') renderSettingsScreen();
+  if(name==='growth')     renderGrowth();
+  if(name==='analytics')  renderAnalytics();
+  if(name==='highlights') renderHighlights();
+  if(name==='settings')   renderSettingsScreen();
   if(name==='upload'){ renderRecent(); switchUploadTab('tradebook'); }
 }
 
@@ -1491,11 +1503,34 @@ function saveBrokerage(date) {
 function saveCharts(date) {
   if(!journal[date]) return;
   journal[date].charts = {
-    nifty:     (document.getElementById('chart-nifty')    ||{}).value?.trim() || journal[date].charts?.nifty    || '',
-    sensex:    (document.getElementById('chart-sensex')   ||{}).value?.trim() || journal[date].charts?.sensex   || '',
-    banknifty: (document.getElementById('chart-banknifty')||{}).value?.trim() || journal[date].charts?.banknifty|| '',
+    nifty:      (document.getElementById('chart-nifty')       ||{}).value?.trim() || journal[date].charts?.nifty      || '',
+    niftyCe:    (document.getElementById('chart-nifty-ce')    ||{}).value?.trim() || journal[date].charts?.niftyCe    || '',
+    niftyPe:    (document.getElementById('chart-nifty-pe')    ||{}).value?.trim() || journal[date].charts?.niftyPe    || '',
+    sensex:     (document.getElementById('chart-sensex')      ||{}).value?.trim() || journal[date].charts?.sensex     || '',
+    sensexCe:   (document.getElementById('chart-sensex-ce')   ||{}).value?.trim() || journal[date].charts?.sensexCe   || '',
+    sensexPe:   (document.getElementById('chart-sensex-pe')   ||{}).value?.trim() || journal[date].charts?.sensexPe   || '',
+    banknifty:  (document.getElementById('chart-banknifty')   ||{}).value?.trim() || journal[date].charts?.banknifty  || '',
+    giftNifty:  (document.getElementById('chart-giftnifty')   ||{}).value?.trim() || journal[date].charts?.giftNifty  || '',
   };
   saveJournal();
+  const btn = document.getElementById('note-save-btn');
+  showToast('📊 Charts saved!');
+  renderDayDetail();
+}
+
+function toggleSpecialDay(date){
+  if(!journal[date]) return;
+  journal[date].special = !journal[date].special;
+  saveJournal();
+  showToast(journal[date].special ? '⭐ Marked as Special Day!' : 'Removed special mark');
+  renderDayDetail();
+}
+
+function highlightNote(date){
+  if(!journal[date]) return;
+  journal[date].highlighted = !journal[date].highlighted;
+  saveJournal();
+  showToast(journal[date].highlighted ? '📌 Note Highlighted!' : 'Highlight removed');
   renderDayDetail();
 }
 
@@ -1675,15 +1710,33 @@ function renderDayDetail(){
 
       <!-- ── CHARTS ── -->
       <div style="margin-top:18px;margin-bottom:4px;">
-        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">📊 TradingView Charts</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;">📊 TradingView Charts</div>
+          <button onclick="toggleSpecialDay('${selectedDate}')"
+            style="padding:5px 12px;background:${journal[selectedDate]?.special?'rgba(245,200,66,0.15)':'var(--card2)'};border:1px solid ${journal[selectedDate]?.special?'var(--gold)':'var(--border2)'};border-radius:20px;font-size:11px;font-weight:700;color:${journal[selectedDate]?.special?'var(--gold)':'var(--text3)'};cursor:pointer;font-family:var(--font);">
+            ${journal[selectedDate]?.special?'⭐ Special Day':'☆ Mark Special'}
+          </button>
+        </div>
         <div style="background:var(--bg2);border-radius:14px;padding:14px;border:1px solid var(--border2);">
-          ${chartRow('chart-nifty',     'NIFTY',     '🟢', '#22C55E', charts.nifty     ||'', selectedDate)}
-          ${chartRow('chart-sensex',    'SENSEX',    '🔵', '#3B82F6', charts.sensex    ||'', selectedDate)}
-          ${chartRow('chart-banknifty', 'BANKNIFTY', '🟡', '#F5C842', charts.banknifty ||'', selectedDate)}
+          <div style="font-size:10px;color:var(--text3);margin-bottom:10px;">Paste TradingView share links below. Tap to open.</div>
+
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;margin-top:4px;">NIFTY</div>
+          ${chartRow('chart-nifty',        'NIFTY Index',  '🟢', '#22C55E', charts.nifty        ||'', selectedDate)}
+          ${chartRow('chart-nifty-ce',     'NIFTY CE',     '🟢', '#4ade80', charts.niftyCe      ||'', selectedDate)}
+          ${chartRow('chart-nifty-pe',     'NIFTY PE',     '🔴', '#f87171', charts.niftyPe      ||'', selectedDate)}
+
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;margin-top:12px;">SENSEX</div>
+          ${chartRow('chart-sensex',       'SENSEX Index', '🔵', '#3B82F6', charts.sensex       ||'', selectedDate)}
+          ${chartRow('chart-sensex-ce',    'SENSEX CE',    '🔵', '#60a5fa', charts.sensexCe     ||'', selectedDate)}
+          ${chartRow('chart-sensex-pe',    'SENSEX PE',    '🟣', '#c084fc', charts.sensexPe     ||'', selectedDate)}
+
+          <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;margin-top:12px;">OTHERS</div>
+          ${chartRow('chart-banknifty',    'BANKNIFTY',    '🟡', '#F5C842', charts.banknifty    ||'', selectedDate)}
+          ${chartRow('chart-giftnifty',    'GIFT NIFTY',   '🟠', '#f97316', charts.giftNifty    ||'', selectedDate)}
+
           <button onclick="saveCharts('${selectedDate}')"
-            style="width:100%;margin-top:6px;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);transition:opacity .15s;"
-            onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-            Save Charts
+            style="width:100%;margin-top:10px;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);">
+            💾 Save Charts
           </button>
           <div style="font-size:10px;color:var(--text3);margin-top:8px;text-align:center;">
             TradingView → Share → Copy link → paste above
@@ -1693,8 +1746,14 @@ function renderDayDetail(){
 
       <!-- ── DAILY NOTE ── -->
       <div style="margin-top:18px;">
-        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📝 Daily Note</div>
-        <div style="background:var(--bg2);border-radius:14px;padding:14px;border:1px solid var(--border2);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;">📝 Daily Note</div>
+          <button onclick="highlightNote('${selectedDate}')"
+            style="padding:5px 12px;background:${journal[selectedDate]?.highlighted?'rgba(245,200,66,0.15)':'var(--card2)'};border:1px solid ${journal[selectedDate]?.highlighted?'var(--gold)':'var(--border2)'};border-radius:20px;font-size:11px;font-weight:700;color:${journal[selectedDate]?.highlighted?'var(--gold)':'var(--text3)'};cursor:pointer;font-family:var(--font);">
+            ${journal[selectedDate]?.highlighted?'📌 Highlighted':'📌 Highlight Note'}
+          </button>
+        </div>
+        <div style="background:var(--bg2);border-radius:14px;padding:14px;border:1px solid ${journal[selectedDate]?.highlighted?'var(--gold)':'var(--border2)'};">
           <textarea
             id="day-note"
             placeholder="What happened today? Key observations, mistakes, lessons learned, market conditions…"
@@ -1704,7 +1763,7 @@ function renderDayDetail(){
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:10px;border-top:1px solid var(--border);">
             <span style="font-size:11px;color:var(--text3);" id="note-char">${note.length} chars</span>
             <button id="note-save-btn" onclick="saveNote('${selectedDate}')"
-              style="padding:8px 20px;background:var(--card2);color:var(--text2);border:1px solid var(--border2);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .15s;">
+              style="padding:8px 20px;background:var(--card2);color:var(--text2);border:1px solid var(--border2);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);">
               Save Note
             </button>
           </div>
@@ -1775,6 +1834,90 @@ function renderAllDays(){
       </div>`;
     }).join('')}
   `;
+}
+
+// ======================================================
+//  HIGHLIGHTS SCREEN
+// ======================================================
+function renderHighlights(){
+  const el = document.getElementById('highlights-content');
+  if(!el) return;
+
+  const entries = Object.entries(journal).sort(([a],[b])=>b.localeCompare(a));
+  const specialDays      = entries.filter(([,d])=>d.special);
+  const highlightedNotes = entries.filter(([,d])=>d.highlighted && d.note && d.note.trim().length>0);
+
+  const chartLabels = {nifty:'NIFTY',niftyCe:'NIFTY CE',niftyPe:'NIFTY PE',sensex:'SENSEX',sensexCe:'SENSEX CE',sensexPe:'SENSEX PE',banknifty:'BANKNIFTY',giftNifty:'GIFT NIFTY'};
+  const chartColors = {nifty:'#22C55E',niftyCe:'#4ade80',niftyPe:'#f87171',sensex:'#3B82F6',sensexCe:'#60a5fa',sensexPe:'#c084fc',banknifty:'#F5C842',giftNifty:'#f97316'};
+
+  let html = '<div style="font-family:var(--head);font-size:22px;font-weight:700;color:var(--gold);margin-bottom:4px;">&#128204; Highlights</div>';
+  html += '<div style="font-size:11px;color:var(--text3);margin-bottom:20px;">Your starred days, highlighted notes and special charts</div>';
+
+  if(specialDays.length===0 && highlightedNotes.length===0){
+    html += '<div style="text-align:center;padding:40px 0;"><div style="font-size:40px;margin-bottom:14px;">&#128204;</div><div style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:6px;">No highlights yet</div><div style="font-size:12px;color:var(--text3);line-height:1.7;">Open any trading day<br/>Tap <b style="color:var(--gold);">&#9734; Mark Special</b> to star it<br/>Tap <b style="color:#a78bfa;">&#128204; Highlight Note</b> to pin key observations</div></div>';
+  }
+
+  if(specialDays.length>0){
+    html += '<div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">&#11088; Special Days ('+specialDays.length+')</div>';
+    specialDays.forEach(([date,d])=>{
+      const net = netOf(d);
+      const charts = d.charts||{};
+      const chartEntries = Object.entries(charts).filter(([,v])=>v&&v.length>0);
+      html += '<div style="background:var(--card);border:1px solid rgba(245,200,66,0.25);border-radius:14px;padding:16px;margin-bottom:10px;">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">';
+      html += '<div><div style="font-size:15px;font-weight:700;color:var(--gold);">&#11088; '+date+'</div>';
+      html += '<div style="font-size:11px;color:var(--text3);margin-top:2px;">'+(d.trades||0)+' instruments &middot; '+(d.rawCount||0)+' fills</div></div>';
+      html += '<div style="font-family:var(--head);font-size:18px;font-weight:700;color:'+(net>=0?'var(--green)':'var(--red)')+';">'+fmtPnl(net,true)+'</div></div>';
+      if(d.note) html += '<div style="font-size:12px;color:var(--text2);line-height:1.8;background:var(--bg2);border-radius:10px;padding:10px;margin-bottom:10px;border-left:3px solid var(--gold);">&ldquo;'+d.note.trim().slice(0,250)+(d.note.length>250?'&hellip;':'')+'&rdquo;</div>';
+      if(chartEntries.length>0){
+        html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">';
+        chartEntries.forEach(([k,v])=>{
+          html += '<a href="'+v+'" target="_blank" rel="noopener" style="text-decoration:none;padding:5px 12px;background:var(--bg2);border:1px solid '+(chartColors[k]||'var(--border2)')+'44;border-radius:20px;font-size:11px;font-weight:600;color:'+(chartColors[k]||'var(--text2)')+';">&#128202; '+(chartLabels[k]||k)+' &#8599;</a>';
+        });
+        html += '</div>';
+      }
+      html += '<button onclick="openDay(\''+date+'\')" style="padding:7px 14px;background:var(--card2);border:1px solid var(--border2);border-radius:8px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">Open Day &rarr;</button>';
+      html += '</div>';
+    });
+  }
+
+  if(highlightedNotes.length>0){
+    html += '<div style="font-size:12px;font-weight:700;color:#a78bfa;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;margin-top:'+(specialDays.length>0?'20px':'0')+';">&#128204; Highlighted Notes ('+highlightedNotes.length+')</div>';
+    highlightedNotes.forEach(([date,d])=>{
+      const net = netOf(d);
+      html += '<div style="background:var(--card);border:1px solid rgba(167,139,250,0.25);border-radius:14px;padding:16px;margin-bottom:10px;">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">';
+      html += '<div style="font-size:13px;font-weight:700;color:#a78bfa;">&#128204; '+date+'</div>';
+      html += '<div style="font-family:var(--head);font-size:15px;font-weight:700;color:'+(net>=0?'var(--green)':'var(--red)')+';">'+fmtPnl(net,true)+'</div></div>';
+      html += '<div style="font-size:12px;color:var(--text2);line-height:1.8;background:var(--bg2);border-radius:10px;padding:12px;border-left:3px solid #a78bfa;margin-bottom:10px;">&ldquo;'+d.note.trim()+'&rdquo;</div>';
+      // Show charts for this day too
+      const charts = d.charts||{};
+      const chartEntries = Object.entries(charts).filter(([,v])=>v&&v.length>0);
+      if(chartEntries.length>0){
+        html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">';
+        chartEntries.forEach(([k,v])=>{
+          html += '<a href="'+v+'" target="_blank" rel="noopener" style="text-decoration:none;padding:5px 12px;background:var(--bg2);border:1px solid '+(chartColors[k]||'var(--border2)')+'44;border-radius:20px;font-size:11px;font-weight:600;color:'+(chartColors[k]||'var(--text2)')+';">&#128202; '+(chartLabels[k]||k)+' &#8599;</a>';
+        });
+        html += '</div>';
+      }
+      html += '<button onclick="openDay(\''+date+'\')" style="padding:7px 14px;background:var(--card2);border:1px solid var(--border2);border-radius:8px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">Open Day &rarr;</button>';
+      html += '</div>';
+    });
+  }
+
+  el.innerHTML = html;
+}
+
+function openDay(date){
+  selectedDate = date;
+  const journalBtn = document.querySelector('.nav-item');
+  showScreen('journal', journalBtn);
+  renderCalendar();
+  setTimeout(()=>{
+    renderDayDetail();
+    const el = document.getElementById('day-detail');
+    if(el) el.scrollIntoView({behavior:'smooth'});
+  }, 150);
 }
 
 // ======================================================
