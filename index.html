@@ -419,25 +419,6 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
       <div style="padding:16px 14px;max-width:540px;margin:0 auto;">
         <div class="section-label">Account Settings</div>
 
-        <!-- Market Mode -->
-        <div class="card card-pad" style="margin-bottom:14px;">
-          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">🌍 Market Mode</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.6;">Switch between Indian market (₹), Forex, Crypto or Commodities ($). Each mode changes currency, instruments and chart labels.</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="market-mode-btns">
-            ${Object.entries(MARKET_CONFIG).map(([key,cfg])=>`
-              <button onclick="setMarketMode('${key}')" id="mmode-${key}"
-                style="padding:12px;border-radius:12px;border:1.5px solid ${MARKET_MODE===key?cfg.color:'var(--border2)'};background:${MARKET_MODE===key?`rgba(99,99,99,0.12)`:'var(--card2)'};cursor:pointer;font-family:var(--font);text-align:left;transition:all .15s;">
-                <div style="font-size:18px;margin-bottom:4px;">${cfg.flag}</div>
-                <div style="font-size:12px;font-weight:700;color:${MARKET_MODE===key?cfg.color:'var(--text2)'};">${cfg.name}</div>
-                <div style="font-size:10px;color:var(--text3);margin-top:2px;">${cfg.sym} ${key==='indian'?'INR':'USD'}</div>
-                ${MARKET_MODE===key?`<div style="font-size:9px;color:${cfg.color};margin-top:4px;font-weight:700;">● ACTIVE</div>`:''}
-              </button>`).join('')}
-          </div>
-          <div style="margin-top:12px;padding:10px 14px;background:var(--bg2);border-radius:10px;font-size:11px;color:var(--text3);line-height:1.6;">
-            💡 <b style="color:var(--text2);">Active:</b> ${MARKET_CONFIG[MARKET_MODE].flag} ${MARKET_CONFIG[MARKET_MODE].name} · Upload format: ${MARKET_CONFIG[MARKET_MODE].uploadHint}
-          </div>
-        </div>
-
         <div class="card card-pad" style="margin-bottom:14px;">
           <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:16px;">👤 Profile</div>
 
@@ -1425,12 +1406,11 @@ function handleFile(file) {
 // ======================================================
 function fmtPnl(n,short=false){
   const abs=Math.abs(n),sign=n>=0?'+':'-';
-  const sym = CURR_SYMBOL||'₹';
-  if(short&&abs>=100000)return sign+sym+(abs/100000).toFixed(1)+'L';
-  if(short&&abs>=1000)return sign+sym+(abs/1000).toFixed(1)+'K';
-  return(n>=0?'+':'-')+sym+abs.toLocaleString('en-IN',{maximumFractionDigits:0});
+  if(short&&abs>=100000)return sign+'₹'+(abs/100000).toFixed(1)+'L';
+  if(short&&abs>=1000)return sign+'₹'+(abs/1000).toFixed(1)+'K';
+  return(n>=0?'+':'-')+'₹'+abs.toLocaleString('en-IN',{maximumFractionDigits:0});
 }
-function fmtInr(n){ const sym=CURR_SYMBOL||'₹'; return sym+Math.abs(Math.round(n)).toLocaleString('en-IN'); }
+function fmtInr(n){return'₹'+Math.abs(Math.round(n)).toLocaleString('en-IN');}
 function fmtL(n){
   if(n>=10000000)return(n/10000000).toFixed(2)+' Cr';
   if(n>=100000)return(n/100000).toFixed(2)+'L';
@@ -1765,7 +1745,6 @@ function renderDayDetail(){
       </div>
 
       <!-- ── DAILY NOTE ── -->
-      <!-- ── DAILY NOTE ── -->
       <div style="margin-top:18px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;">📝 Daily Note</div>
@@ -1777,41 +1756,16 @@ function renderDayDetail(){
         <div style="background:var(--bg2);border-radius:14px;padding:14px;border:1px solid ${journal[selectedDate]?.highlighted?'var(--gold)':'var(--border2)'};">
           <textarea
             id="day-note"
-            placeholder="Write rough notes here… e.g: nifty broke 24000, took ce at 150, sl hit at 120, missed banknifty setup, revenge trade on sensex lost 5k, need to wait more"
+            placeholder="What happened today? Key observations, mistakes, lessons learned, market conditions…"
             style="width:100%;min-height:110px;background:transparent;border:none;outline:none;font-size:13px;color:var(--text);font-family:var(--font);line-height:1.7;resize:vertical;"
             oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';"
           >${note}</textarea>
-
-          <!-- AI Polish section -->
-          <div id="polish-result-${selectedDate}" style="${journal[selectedDate]?.polishedNote?'display:block':'display:none'}">
-            <div style="margin:10px 0 6px;padding-top:10px;border-top:1px dashed var(--border2);">
-              <div style="font-size:10px;font-weight:700;color:#a78bfa;letter-spacing:1px;margin-bottom:8px;">✨ AI POLISHED VERSION</div>
-              <div id="polish-text-${selectedDate}" style="font-size:12px;color:var(--text2);line-height:1.8;background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);border-radius:10px;padding:12px;">${journal[selectedDate]?.polishedNote||''}</div>
-              <div style="display:flex;gap:8px;margin-top:8px;">
-                <button onclick="acceptPolished('${selectedDate}')"
-                  style="flex:1;padding:8px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3);border-radius:8px;font-size:11px;font-weight:700;color:#a78bfa;cursor:pointer;font-family:var(--font);">
-                  ✅ Use This Version
-                </button>
-                <button onclick="document.getElementById('polish-result-${selectedDate}').style.display='none'"
-                  style="padding:8px 14px;background:var(--card2);border:1px solid var(--border2);border-radius:8px;font-size:11px;font-weight:600;color:var(--text3);cursor:pointer;font-family:var(--font);">
-                  ✕
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:10px;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:10px;border-top:1px solid var(--border);">
             <span style="font-size:11px;color:var(--text3);" id="note-char">${note.length} chars</span>
-            <div style="display:flex;gap:6px;">
-              <button id="polish-btn-${selectedDate}" onclick="polishNote('${selectedDate}')"
-                style="padding:8px 14px;background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(99,102,241,0.15));border:1px solid rgba(139,92,246,0.35);border-radius:8px;font-size:11px;font-weight:700;color:#a78bfa;cursor:pointer;font-family:var(--font);">
-                ✨ Polish
-              </button>
-              <button id="note-save-btn" onclick="saveNote('${selectedDate}')"
-                style="padding:8px 20px;background:var(--card2);color:var(--text2);border:1px solid var(--border2);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);">
-                Save Note
-              </button>
-            </div>
+            <button id="note-save-btn" onclick="saveNote('${selectedDate}')"
+              style="padding:8px 20px;background:var(--card2);color:var(--text2);border:1px solid var(--border2);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);">
+              Save Note
+            </button>
           </div>
         </div>
       </div>
@@ -1883,237 +1837,8 @@ function renderAllDays(){
 }
 
 // ======================================================
-//  FREE LOCAL NOTE POLISH — no API, no cost, instant
+//  HIGHLIGHTS SCREEN
 // ======================================================
-function polishNote(date){
-  const ta  = document.getElementById('day-note');
-  const btn = document.getElementById('polish-btn-'+date);
-  if(!ta || !ta.value.trim()){ showToast('Write a note first!'); return; }
-
-  const rough = ta.value.trim();
-  if(rough.length < 10){ showToast('Note too short to polish'); return; }
-
-  if(btn){ btn.textContent='⏳ Polishing...'; btn.disabled=true; }
-
-  // Small delay for UX feel
-  setTimeout(()=>{
-    try{
-      const polished = localPolishNote(rough, date);
-
-      if(!journal[date]) journal[date] = {};
-      journal[date].polishedNote = polished;
-      saveJournal();
-
-      const resultEl = document.getElementById('polish-result-'+date);
-      const textEl   = document.getElementById('polish-text-'+date);
-      if(resultEl && textEl){
-        textEl.textContent = polished;
-        resultEl.style.display = 'block';
-      }
-      showToast('✨ Note polished! (Free · Local)');
-    }catch(e){
-      showToast('Polish failed');
-    }finally{
-      if(btn){ btn.textContent='✨ Polish'; btn.disabled=false; }
-    }
-  }, 400);
-}
-
-function localPolishNote(text, date){
-  const d = journal[date] || {};
-  const net = (d.pnl||0) - (d.brokerage||0);
-  const sym = CURR_SYMBOL||'₹';
-
-  // ── Step 1: Normalize text ──────────────────────────
-  let t = text.trim();
-
-  // Fix common shortcuts
-  const shortcuts = {
-    'sl ':     'stop loss ',
-    ' sl ':    ' stop loss ',
-    'sl hit':  'stop loss hit',
-    'ce ':     'Call option ',
-    'pe ':     'Put option ',
-    ' ce ':    ' Call option ',
-    ' pe ':    ' Put option ',
-    'nf ':     'NIFTY ',
-    'bnf ':    'BANKNIFTY ',
-    'bn ':     'BANKNIFTY ',
-    'tgt ':    'target ',
-    'entry ':  'entered at ',
-    'expiry':  'expiry',
-    'lvl ':    'level ',
-    'supp ':   'support ',
-    'res ':    'resistance ',
-    'brkout':  'breakout',
-    'brk ':    'breakout ',
-    'mkt ':    'market ',
-    'qty ':    'quantity ',
-    'avg ':    'average ',
-    'pnl ':    'P&L ',
-    'p&l ':    'P&L ',
-    'brok ':   'brokerage ',
-    'rev trade':'revenge trade',
-    'fomo':    'FOMO (fear of missing out)',
-  };
-  const tLow = t.toLowerCase();
-  let normalized = t;
-  Object.entries(shortcuts).forEach(([k,v])=>{
-    const re = new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');
-    normalized = normalized.replace(re, v);
-  });
-
-  // ── Step 2: Extract key info ────────────────────────
-  const sentences = normalized.split(/[.,;!?\n]+/).map(s=>s.trim()).filter(s=>s.length>3);
-
-  // Detect categories
-  const marketWords   = /nifty|banknifty|sensex|market|index|trend|open|gap|range|vix|sgx|gift|breakout|breakdown|support|resistance|level|zone|candle|chart|session/i;
-  const setupWords    = /setup|signal|pattern|entry|entered|ce|pe|call|put|option|future|buy|sell|long|short|strike|expiry|lot|qty|position/i;
-  const executionWords= /bought|sold|exit|exited|stopped|sl hit|stop loss|target hit|tgt hit|booked|profit|loss|partial|average|avg|trail/i;
-  const psychWords    = /revenge|fomo|fear|panic|anxious|frustrated|angry|hesit|miss|late|impulsive|greedy|emotional|forced|overtraded/i;
-  const lessonWords   = /lesson|learn|should|next time|mistake|wrong|regret|better|improve|plan|rule|discipline|wait|patient/i;
-
-  const marketSents    = sentences.filter(s=>marketWords.test(s));
-  const setupSents     = sentences.filter(s=>setupWords.test(s));
-  const executionSents = sentences.filter(s=>executionWords.test(s));
-  const psychSents     = sentences.filter(s=>psychWords.test(s));
-  const lessonSents    = sentences.filter(s=>lessonWords.test(s));
-  const otherSents     = sentences.filter(s=>
-    !marketWords.test(s) && !setupWords.test(s) &&
-    !executionWords.test(s) && !psychWords.test(s) && !lessonWords.test(s)
-  );
-
-  // ── Step 3: Build professional sections ─────────────
-  const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1);
-  const clean = s => capitalize(s.trim().replace(/\s+/g,' '));
-
-  const parts = [];
-
-  // Market observation
-  if(marketSents.length > 0){
-    parts.push('Market Observation: ' + marketSents.map(clean).join('. ') + '.');
-  }
-
-  // Trade setup
-  if(setupSents.length > 0){
-    parts.push('Trade Setup: ' + setupSents.map(clean).join('. ') + '.');
-  }
-
-  // Execution & result
-  const execAll = [...executionSents, ...otherSents];
-  if(execAll.length > 0){
-    parts.push('Execution: ' + execAll.map(clean).join('. ') + '.');
-  }
-
-  // Add P&L context if not mentioned
-  const hasPnlMention = /\d+[kl]?|\bprofit\b|\bloss\b|\bbooked\b/i.test(text);
-  if(!hasPnlMention && net !== 0){
-    const outcome = net >= 0
-      ? `Day closed with a net profit of ${sym}${Math.abs(net).toLocaleString()}.`
-      : `Day closed with a net loss of ${sym}${Math.abs(net).toLocaleString()}.`;
-    parts.push('Outcome: ' + outcome);
-  }
-
-  // Psychology note
-  if(psychSents.length > 0){
-    parts.push('Psychology: ' + psychSents.map(clean).join('. ') + '.');
-  }
-
-  // Lesson
-  if(lessonSents.length > 0){
-    parts.push('Key Takeaway: ' + lessonSents.map(clean).join('. ') + '.');
-  }
-
-  // If nothing was categorised well, just clean and return original
-  if(parts.length === 0){
-    return sentences.map(clean).join('. ') + '.';
-  }
-
-  return parts.join('\n\n');
-}
-
-function acceptPolished(date){
-  const ta = document.getElementById('day-note');
-  const polished = journal[date]?.polishedNote;
-  if(!ta || !polished) return;
-  ta.value = polished;
-  ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px';
-  const cc = document.getElementById('note-char');
-  if(cc) cc.textContent = polished.length + ' chars';
-  const resultEl = document.getElementById('polish-result-'+date);
-  if(resultEl) resultEl.style.display = 'none';
-  journal[date].note = polished;
-  saveJournal();
-  showToast('✅ Polished note saved!');
-  const btn = document.getElementById('note-save-btn');
-  if(btn){ btn.textContent='✓ Saved'; btn.style.background='var(--green)'; btn.style.color='#0A0A12';
-    setTimeout(()=>{ btn.textContent='Save Note'; btn.style.background='var(--card2)'; btn.style.color='var(--text2)'; }, 1400); }
-}
-
-// ======================================================
-//  MULTI-MARKET MODE
-//  indian | forex | crypto | commodities
-// ======================================================
-let MARKET_MODE = 'indian'; // default
-
-// Currency symbols & labels per market
-const MARKET_CONFIG = {
-  indian: {
-    sym: '₹', name: 'Indian Market', flag: '🇮🇳',
-    instruments: ['NIFTY','BANKNIFTY','SENSEX','FINNIFTY','MIDCAP'],
-    chartLabels: {nifty:'NIFTY Index',niftyCe:'NIFTY CE',niftyPe:'NIFTY PE',sensex:'SENSEX Index',sensexCe:'SENSEX CE',sensexPe:'SENSEX PE',banknifty:'BANKNIFTY',giftNifty:'GIFT NIFTY'},
-    uploadHint: 'Fyers, Zerodha, Upstox, Angel, Groww, ICICI etc.',
-    planTargetDefault: 10000000, capitalDefault: 500000,
-    color: '#f97316'
-  },
-  forex: {
-    sym: '$', name: 'Forex', flag: '💱',
-    instruments: ['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD','USD/CHF','NZD/USD','GBP/JPY'],
-    chartLabels: {nifty:'EUR/USD',niftyCe:'GBP/USD',niftyPe:'USD/JPY',sensex:'AUD/USD',sensexCe:'USD/CAD',sensexPe:'USD/CHF',banknifty:'NZD/USD',giftNifty:'GBP/JPY'},
-    uploadHint: 'MT4/MT5 CSV, cTrader, OANDA, IC Markets etc.',
-    planTargetDefault: 100000, capitalDefault: 10000,
-    color: '#3B82F6'
-  },
-  crypto: {
-    sym: '$', name: 'Crypto', flag: '₿',
-    instruments: ['BTC/USDT','ETH/USDT','BNB/USDT','SOL/USDT','XRP/USDT','ADA/USDT','DOGE/USDT','AVAX/USDT'],
-    chartLabels: {nifty:'BTC/USDT',niftyCe:'BTC Long',niftyPe:'BTC Short',sensex:'ETH/USDT',sensexCe:'ETH Long',sensexPe:'ETH Short',banknifty:'BNB/USDT',giftNifty:'SOL/USDT'},
-    uploadHint: 'Binance, Coinbase, Bybit, Kraken CSV etc.',
-    planTargetDefault: 100000, capitalDefault: 5000,
-    color: '#F5C842'
-  },
-  commodities: {
-    sym: '$', name: 'Commodities', flag: '🥇',
-    instruments: ['GOLD','SILVER','CRUDE OIL','NATURAL GAS','COPPER','PLATINUM'],
-    chartLabels: {nifty:'GOLD/USD',niftyCe:'GOLD Long',niftyPe:'GOLD Short',sensex:'SILVER/USD',sensexCe:'SILVER Long',sensexPe:'SILVER Short',banknifty:'CRUDE OIL',giftNifty:'NAT GAS'},
-    uploadHint: 'MT4/MT5, Interactive Brokers, TD Ameritrade CSV etc.',
-    planTargetDefault: 100000, capitalDefault: 10000,
-    color: '#F5C842'
-  }
-};
-
-// Dynamic currency symbol — always reads from current mode
-let CURR_SYMBOL = '₹';
-
-function setMarketMode(mode){
-  MARKET_MODE  = mode;
-  CURR_SYMBOL  = MARKET_CONFIG[mode].sym;
-  // Save to settings
-  try{ localStorage.setItem('market_mode', mode); }catch(e){}
-  // Update UI
-  showToast(MARKET_CONFIG[mode].flag+' Switched to '+MARKET_CONFIG[mode].name);
-  renderTopStats(); renderCalendar();
-  if(document.getElementById('screen-settings').classList.contains('active')) renderSettingsScreen();
-}
-
-function loadMarketMode(){
-  try{
-    const saved = localStorage.getItem('market_mode');
-    if(saved && MARKET_CONFIG[saved]){ MARKET_MODE=saved; CURR_SYMBOL=MARKET_CONFIG[saved].sym; }
-  }catch(e){}
-}
-
-
 function renderHighlights(){
   const el = document.getElementById('highlights-content');
   if(!el) return;
@@ -4382,7 +4107,6 @@ function clearAllData(){
 // ======================================================
 loadSettings();
 loadJournal();
-loadMarketMode();
 
 // Set topbar name
 document.getElementById('top-sub').textContent = USER_NAME + ' · All Brokers Supported';
