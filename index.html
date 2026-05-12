@@ -1410,16 +1410,29 @@ function handleFile(file) {
 function fmtPnl(n,short=false){
   const abs=Math.abs(n),sign=n>=0?'+':'-';
   const sym = CURR_SYMBOL||'₹';
-  if(short&&abs>=100000)return sign+sym+(abs/100000).toFixed(1)+'L';
-  if(short&&abs>=1000)return sign+sym+(abs/1000).toFixed(1)+'K';
+  if(MARKET_MODE === 'indian'){
+    if(short&&abs>=100000)return sign+sym+(abs/100000).toFixed(1)+'L';
+    if(short&&abs>=1000)return sign+sym+(abs/1000).toFixed(1)+'K';
+  } else {
+    if(short&&abs>=1000000)return sign+sym+(abs/1000000).toFixed(2)+'M';
+    if(short&&abs>=1000)return sign+sym+(abs/1000).toFixed(1)+'K';
+  }
   return(n>=0?'+':'-')+sym+abs.toLocaleString('en-IN',{maximumFractionDigits:0});
 }
 function fmtInr(n){ const sym=CURR_SYMBOL||'₹'; return sym+Math.abs(Math.round(n)).toLocaleString('en-IN'); }
 function fmtL(n){
-  if(n>=10000000)return(n/10000000).toFixed(2)+' Cr';
-  if(n>=100000)return(n/100000).toFixed(2)+'L';
-  if(n>=1000)return(n/1000).toFixed(1)+'K';
-  return'₹'+Math.round(n).toLocaleString('en-IN');
+  const sym = CURR_SYMBOL||'₹';
+  if(MARKET_MODE === 'indian'){
+    if(n>=10000000)return(n/10000000).toFixed(2)+' Cr';
+    if(n>=100000)return(n/100000).toFixed(2)+'L';
+    if(n>=1000)return(n/1000).toFixed(1)+'K';
+    return sym+Math.round(n).toLocaleString('en-IN');
+  } else {
+    // USD formatting
+    if(n>=1000000)return sym+(n/1000000).toFixed(2)+'M';
+    if(n>=1000)return sym+(n/1000).toFixed(1)+'K';
+    return sym+Math.round(n).toLocaleString('en-US');
+  }
 }
 function shortSym(s){return s.replace(/26[A-Z]{3}/g,'').replace(/([A-Z]+)(\d+)(CE|PE)/,'$1 $2$3');}
 function isWeekend(y,m,d){const wd=new Date(y,m,d).getDay();return wd===0||wd===6;}
@@ -2084,9 +2097,31 @@ function setMarketMode(mode){
   CURR_SYMBOL  = MARKET_CONFIG[mode].sym;
   // Save to settings
   try{ localStorage.setItem('market_mode', mode); }catch(e){}
+
+  // Update capital & target defaults when switching markets
+  const cfg = MARKET_CONFIG[mode];
+  if(mode !== 'indian'){
+    // Check if current capital looks like Indian (> 50000 = likely rupees)
+    if(INITIAL_CAPITAL > 50000){
+      INITIAL_CAPITAL = cfg.capitalDefault;
+      TARGET = cfg.planTargetDefault;
+      saveSettings(INITIAL_CAPITAL, TARGET, USER_NAME);
+    }
+  } else {
+    // Switching back to Indian — if capital looks like USD (< 50000)
+    if(INITIAL_CAPITAL < 50000){
+      INITIAL_CAPITAL = 500000;
+      TARGET = 10000000;
+      saveSettings(INITIAL_CAPITAL, TARGET, USER_NAME);
+    }
+  }
+
   // Update UI
-  showToast(MARKET_CONFIG[mode].flag+' Switched to '+MARKET_CONFIG[mode].name);
+  showToast(cfg.flag+' Switched to '+cfg.name+' · '+cfg.sym+(mode==='indian'?' INR':' USD'));
   renderTopStats(); renderCalendar();
+  if(document.getElementById('screen-plan').classList.contains('active')) renderPlan();
+  if(document.getElementById('screen-stats').classList.contains('active')) renderStats();
+  if(document.getElementById('screen-growth').classList.contains('active')) renderGrowth();
   if(document.getElementById('screen-settings').classList.contains('active')) renderSettingsScreen();
 }
 
