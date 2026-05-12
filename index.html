@@ -349,7 +349,7 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
             <div>
               <div class="section-label" style="margin-bottom:4px;">TARGET</div>
-              <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);letter-spacing:1px;">₹1 CRORE</div>
+              <div id="plan-target-label" style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);letter-spacing:1px;">₹1 CRORE</div>
               <div id="plan-eta" style="font-size:11px;color:var(--muted);margin-top:2px;"></div>
             </div>
             <div style="text-align:right;">
@@ -364,9 +364,9 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
               <div id="plan-progress" class="progress-bar-fill" style="width:5%;"></div>
             </div>
             <div style="display:flex;justify-content:space-between;margin-top:4px;">
-              <span style="font-size:8px;color:var(--dim);">₹5L START</span>
+              <span style="font-size:8px;color:var(--dim);" id="plan-start-label">₹5L START</span>
               <span id="plan-progress-label" style="font-size:8px;color:var(--muted);"></span>
-              <span style="font-size:8px;color:var(--dim);">₹1 CR GOAL</span>
+              <span style="font-size:8px;color:var(--dim);" id="plan-goal-label">₹1 CR GOAL</span>
             </div>
           </div>
         </div>
@@ -1685,7 +1685,7 @@ function renderDayDetail(){
               <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
                 ${Object.entries(d.brokerageBreakdown||{}).filter(([,v])=>v>0).map(([k,v])=>`
                   <div style="background:var(--card);border:1px solid #4A1A1A;border-radius:7px;padding:4px 9px;font-size:10px;font-weight:600;color:var(--text3);">
-                    ${k.toUpperCase()} <span style="color:var(--red);">₹${v.toFixed(2)}</span>
+                    ${k.toUpperCase()} <span style="color:var(--red);">${CURR_SYMBOL}${v.toFixed(2)}</span>
                   </div>`).join('')}
               </div>` : ''}
             <div style="padding-top:10px;border-top:1px solid var(--border);">
@@ -1716,7 +1716,7 @@ function renderDayDetail(){
         <div class="inst-row">
           <div style="flex:1;min-width:0;">
             <div style="font-size:13px;color:var(--text);font-weight:600;margin-bottom:3px;">${shortSym(r.sym)}</div>
-            <div style="font-size:11px;color:var(--text3);font-family:var(--mono);">B ₹${r.avgBuy.toFixed(1)}×${r.buyQty} &nbsp;|&nbsp; S ₹${r.avgSell.toFixed(1)}×${r.sellQty}</div>
+            <div style="font-size:11px;color:var(--text3);font-family:var(--mono);">B ${CURR_SYMBOL}${r.avgBuy.toFixed(1)}×${r.buyQty} &nbsp;|&nbsp;  S ${CURR_SYMBOL}${r.avgSell.toFixed(1)}×${r.sellQty}</div>
           </div>
           <div style="text-align:right;flex-shrink:0;">
             <div style="font-family:var(--head);font-size:16px;font-weight:700;color:${r.pnl>=0?'var(--green)':'var(--red)'};">${fmtPnl(r.pnl)}</div>
@@ -2788,7 +2788,7 @@ function populateManualDateSelect(){
   sel.innerHTML = '<option value="">— Pick a trading day —</option>' +
     dates.map(d=>{
       const brok = journal[d].brokerage||0;
-      return `<option value="${d}">${d}  ${brok>0?'(₹'+Math.round(brok)+' charges)':'(no charges)'}  ${fmtPnl(journal[d].pnl,true)}</option>`;
+      return `<option value="${d}">${d}  ${brok>0?'('+CURR_SYMBOL+Math.round(brok)+' charges)':'(no charges)'}  ${fmtPnl(journal[d].pnl,true)}</option>`;
     }).join('');
   renderManualChargesForm();
 }
@@ -2994,7 +2994,15 @@ function renderPlanHero(){
   document.getElementById('plan-eta').textContent=`in ${mthsToTarget(sc)} months with ${sc.label} strategy`;
   document.getElementById('plan-daily').style.color=sc.color;
   document.getElementById('plan-daily').textContent=fmtInr(firstMonth.daily);
-  document.getElementById('plan-daily-pct').textContent=`${(sc.dailyTarget*100).toFixed(1)}% of ₹5L on Day 1`;
+  document.getElementById('plan-daily-pct').textContent=`${(sc.dailyTarget*100).toFixed(1)}% of ${CURR_SYMBOL}${fmtL(INITIAL_CAPITAL)} on Day 1`;
+
+  // Update target label & progress labels with correct currency
+  const targetEl = document.getElementById('plan-target-label');
+  if(targetEl) targetEl.textContent = CURR_SYMBOL+fmtL(TARGET);
+  const startLbl = document.getElementById('plan-start-label');
+  if(startLbl) startLbl.textContent = fmtL(INITIAL_CAPITAL)+' START';
+  const goalLbl = document.getElementById('plan-goal-label');
+  if(goalLbl) goalLbl.textContent = fmtL(TARGET)+' GOAL';
 
   // Actual capital from journal — only reinvested portion is in account
   const days=Object.values(journal);
@@ -3003,7 +3011,7 @@ function renderPlanHero(){
   document.getElementById('plan-progress').style.width=Math.max(pct,3)+'%';
   document.getElementById('plan-progress').style.background=sc.color;
   const planNow = getPlanCapNow(sc);
-  document.getElementById('plan-progress-label').textContent=`You: ₹${fmtL(actualNet)} | Plan: ₹${fmtL(planNow)}`;
+  document.getElementById('plan-progress-label').textContent=`You: ${CURR_SYMBOL}${fmtL(actualNet)} | Plan: ${CURR_SYMBOL}${fmtL(planNow)}`;
 
   // -- CURRENT GOALS based on ACTUAL capital --
   const dailyGoal   = actualNet * sc.dailyTarget;
@@ -3091,15 +3099,15 @@ function renderPlanHero(){
       <div style="background:#0a0a14;border:1px solid #1a1a2a;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
         <div>
           <div style="font-size:9px;color:var(--dim);margin-bottom:2px;">TRADING ON</div>
-          <div style="font-size:13px;color:var(--gold);font-weight:600;">₹${fmtL(actualNet)} capital</div>
+          <div style="font-size:13px;color:var(--gold);font-weight:600;">${CURR_SYMBOL}${fmtL(actualNet)} capital</div>
         </div>
         <div style="text-align:right;">
           <div style="font-size:9px;color:var(--dim);margin-bottom:2px;">MONTHLY WITHDRAW</div>
-          <div style="font-size:13px;color:var(--green);font-weight:600;">₹${fmtL(monthWithdraw)}</div>
+          <div style="font-size:13px;color:var(--green);font-weight:600;">${CURR_SYMBOL}${fmtL(monthWithdraw)}</div>
         </div>
         <div style="text-align:right;">
           <div style="font-size:9px;color:var(--dim);margin-bottom:2px;">MONTHLY REINVEST</div>
-          <div style="font-size:13px;color:var(--blue);font-weight:600;">₹${fmtL(monthReinvest)}</div>
+          <div style="font-size:13px;color:var(--blue);font-weight:600;">${CURR_SYMBOL}${fmtL(monthReinvest)}</div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -3129,10 +3137,10 @@ function renderPlanContent(){
             <div class="progress-bar-wrap" style="height:4px;"><div class="progress-bar-fill" style="width:${Math.min(m.end/TARGET*100,100)}%;background:${isSel?sc.color:'#222240'};"></div></div>
           </div>
           <div style="text-align:right;min-width:80px;">
-            <div style="font-size:11px;color:${isSel?sc.color:'#9090b0'};">₹${fmtL(m.end)}</div>
+            <div style="font-size:11px;color:${isSel?sc.color:'#9090b0'};">${CURR_SYMBOL}${fmtL(m.end)}</div>
             <div style="font-size:9px;color:var(--green);">+${growthPct}%</div>
           </div>
-          <div style="min-width:60px;text-align:right;font-size:9px;color:var(--gold);">W/D ₹${fmtL(m.withdrawn)}</div>
+          <div style="min-width:60px;text-align:right;font-size:9px;color:var(--gold);">W/D ${CURR_SYMBOL}${fmtL(m.withdrawn)}</div>
         </div>`;
       }).join('')}
       ${journey[planMonth-1]?`
@@ -3173,7 +3181,7 @@ function renderPlanContent(){
         ['Compounding',`${sc.compound*100}% reinvested`,`${sc.withdraw*100}% withdrawn monthly`],
         ['Max Trades','5–8 per day','Stop after hitting target'],
         ['Instruments','2–3 max','NIFTY, BANKNIFTY, SENSEX'],
-        ['Position Size','2.5% risk/trade','Scale up every ₹50K growth'],
+        ['Position Size','2.5% risk/trade','Scale up every ${CURR_SYMBOL}50K growth'],
       ],
       aggressive:[
         ['Daily Target',`${(sc.dailyTarget*100).toFixed(1)}% of capital`,`~${fmtInr(journey[0].daily)} on Day 1`],
@@ -3211,10 +3219,10 @@ function renderPlanContent(){
       </div>
       <div class="card card-pad">
         <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:12px;">📊 CAPITAL SCALING</div>
-        ${[['₹5L–10L','1–2 lots','₹2K risk','Master consistency'],
-           ['₹10L–25L','2–4 lots','₹4K risk','Refine entries'],
-           ['₹25L–50L','4–8 lots','₹8K risk','Scale winners'],
-           ['₹50L–1Cr','8–15 lots','₹15K risk','Execute the plan'],
+        ${[['${CURR_SYMBOL}5K–10K','1–2 lots','${CURR_SYMBOL}2K risk','Master consistency'],
+           ['${CURR_SYMBOL}10K–25K','2–4 lots','${CURR_SYMBOL}4K risk','Refine entries'],
+           ['${CURR_SYMBOL}25K–50K','4–8 lots','${CURR_SYMBOL}8K risk','Scale winners'],
+           ['${CURR_SYMBOL}50K–100K','8–15 lots','${CURR_SYMBOL}15K risk','Execute the plan'],
           ].map(([r,l,rk,f])=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #0a0a14;font-size:10px;">
             <div style="min-width:80px;color:${sc.color};font-weight:600;">${r}</div>
             <div style="flex:1;color:#666680;">${l}</div>
@@ -3226,12 +3234,12 @@ function renderPlanContent(){
 
   else if(activePlanTab==='milestones'){
     const milestones=[
-      ['🚀','Start','₹5 Lakh',500000],
-      ['💫','10 Lakh','₹10L',1000000],
-      ['⭐','25 Lakh','₹25L',2500000],
-      ['🌟','50 Lakh','₹50L',5000000],
-      ['✨','75 Lakh','₹75L',7500000],
-      ['🏆','1 Crore','₹1 Cr',10000000],
+      ['🚀','Start',CURR_SYMBOL+'5K',500000],
+      ['💫','10 Lakh',CURR_SYMBOL+'10K',1000000],
+      ['⭐','25 Lakh',CURR_SYMBOL+'25K',2500000],
+      ['🌟','50 Lakh',CURR_SYMBOL+'50K',5000000],
+      ['✨','75 Lakh',CURR_SYMBOL+'75K',7500000],
+      ['🏆','Goal',CURR_SYMBOL+fmtL(TARGET),10000000],
     ];
     const actualNetCap = calcAccountBalance();
 
@@ -3271,7 +3279,7 @@ function renderPlanContent(){
       <div style="background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
         <div>
           <div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:2px;">YOUR CAPITAL (Net after charges)</div>
-          <div style="font-family:var(--head);font-size:20px;font-weight:700;color:var(--gold);">₹${fmtL(actualNetCap)}</div>
+          <div style="font-family:var(--head);font-size:20px;font-weight:700;color:var(--gold);">${CURR_SYMBOL}${fmtL(actualNetCap)}</div>
         </div>
         <div style="text-align:right;">
           <div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:2px;">STRATEGY</div>
@@ -3298,7 +3306,7 @@ function renderPlanContent(){
           return`<div style="background:var(--card);border:1px solid ${s.best?'#e8c84a33':s.id===activeScenario?s.color+'44':'var(--border)'};border-radius:10px;padding:12px;">
             <div style="font-size:16px;margin-bottom:6px;">${s.emoji}</div>
             <div style="font-size:12px;font-weight:600;color:${s.color};margin-bottom:10px;">${s.label}</div>
-            ${[['To ₹1Cr',mthsToTarget(s)+' months',true],
+            ${[['To '+CURR_SYMBOL+fmtL(TARGET),mthsToTarget(s)+' months',true],
                ['Daily',`${(s.dailyTarget*100).toFixed(1)}%/day`],
                ['Win Rate',`${s.winRate*100}%`],
                ['R:R',`1:${s.rr}`],
@@ -3320,7 +3328,7 @@ function renderPlanContent(){
         ${[1,2,3,4,5,6,8,10,12,15,18,24].map(mo=>`
           <div style="display:grid;grid-template-columns:30px repeat(3,1fr);gap:4px;padding:4px 0;border-bottom:1px solid #0a0a14;">
             <div style="font-size:9px;color:var(--dim);">M${mo}</div>
-            ${scs.map(s=>{const j=buildJourney(s);const d=j[mo-1];return`<div style="font-size:9px;color:${d&&d.end>=TARGET?'var(--green)':'#666680'};text-align:center;font-weight:${d&&d.end>=TARGET?700:400};">${d?'₹'+fmtL(d.end)+(d.end>=TARGET?' 🏆':''):'—'}</div>`;}).join('')}
+            ${scs.map(s=>{const j=buildJourney(s);const d=j[mo-1];return`<div style="font-size:9px;color:${d&&d.end>=TARGET?'var(--green)':'#666680'};text-align:center;font-weight:${d&&d.end>=TARGET?700:400};">${d?CURR_SYMBOL+fmtL(d.end)+(d.end>=TARGET?' 🏆':''):'—'}</div>`;}).join('')}
           </div>`).join('')}
       </div>
     `;
@@ -3456,24 +3464,24 @@ function renderStats(){
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
         <div>
           <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:4px;">ACCOUNT BALANCE</div>
-          <div style="font-family:var(--head);font-size:36px;font-weight:800;color:var(--gold);letter-spacing:-1px;line-height:1;">₹${fmtL(actualCap)}</div>
+          <div style="font-family:var(--head);font-size:36px;font-weight:800;color:var(--gold);letter-spacing:-1px;line-height:1;">${CURR_SYMBOL}${fmtL(actualCap)}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:4px;">Capital in account after 70/30 split</div>
           <div style="display:flex;gap:10px;margin-top:5px;flex-wrap:wrap;">
             <span style="font-size:11px;color:${net>=0?'var(--green)':'var(--red)'};font-weight:600;">${fmtPnl(net,true)} net P&L</span>
-            <span style="font-size:11px;color:var(--green);">💰 ₹${fmtL(totalWithdrawnAmt)} withdrawn</span>
+            <span style="font-size:11px;color:var(--green);">💰 ${CURR_SYMBOL}${fmtL(totalWithdrawnAmt)} withdrawn</span>
           </div>
         </div>
         <div style="text-align:right;">
           <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:4px;">TARGET</div>
-          <div style="font-family:var(--head);font-size:24px;font-weight:800;color:var(--text3);">₹1 CRORE</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:4px;">₹${fmtL(TARGET-actualCap)} remaining</div>
+          <div style="font-family:var(--head);font-size:24px;font-weight:800;color:var(--text3);">${CURR_SYMBOL}${fmtL(TARGET)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px;">${CURR_SYMBOL}${fmtL(TARGET-actualCap)} remaining</div>
         </div>
       </div>
       <div style="margin-bottom:14px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-          <span style="font-size:11px;color:var(--text3);">₹5L Start</span>
-          <span style="font-size:12px;color:var(--gold);font-weight:700;">${pct.toFixed(1)}% to ₹1Cr</span>
-          <span style="font-size:11px;color:var(--text3);">₹1Cr Goal</span>
+          <span style="font-size:11px;color:var(--text3);">${CURR_SYMBOL}${fmtL(INITIAL_CAPITAL)}</span>
+          <span style="font-size:12px;color:var(--gold);font-weight:700;">${pct.toFixed(1)}% to ${CURR_SYMBOL}${fmtL(TARGET)}</span>
+          <span style="font-size:11px;color:var(--text3);">${CURR_SYMBOL}${fmtL(TARGET)} Goal</span>
         </div>
         <div class="progress-bar-wrap" style="height:10px;">
           <div class="progress-bar-fill" style="width:${Math.max(pct,1.5)}%;background:linear-gradient(90deg,var(--gold),#F0D868);"></div>
@@ -3482,7 +3490,7 @@ function renderStats(){
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
         <div style="background:var(--card);border-radius:10px;padding:10px;text-align:center;">
           <div style="font-size:9px;color:var(--text3);font-weight:600;margin-bottom:4px;">PLAN TARGET</div>
-          <div style="font-family:var(--head);font-size:15px;font-weight:700;color:var(--gold);">₹${fmtL(planCap)}</div>
+          <div style="font-family:var(--head);font-size:15px;font-weight:700;color:var(--gold);">${CURR_SYMBOL}${fmtL(planCap)}</div>
         </div>
         <div style="background:${actualCap>=planCap?'var(--green-dim)':'var(--red-dim)'};border:1px solid ${actualCap>=planCap?'#1A4A2A':'#4A1A1A'};border-radius:10px;padding:10px;text-align:center;">
           <div style="font-size:9px;color:var(--text3);font-weight:600;margin-bottom:4px;">VS PLAN</div>
@@ -3509,17 +3517,17 @@ function renderStats(){
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
       <div style="background:var(--green-dim);border:1px solid #1A4A2A;border-radius:12px;padding:14px;">
         <div style="font-size:9px;color:#22C55E88;letter-spacing:1.5px;margin-bottom:6px;">💰 WITHDRAWN</div>
-        <div style="font-family:var(--head);font-size:18px;font-weight:700;color:var(--green);">₹${fmtL(totalWithdrawn)}</div>
+        <div style="font-family:var(--head);font-size:18px;font-weight:700;color:var(--green);">${CURR_SYMBOL}${fmtL(totalWithdrawn)}</div>
         <div style="font-size:9px;color:#22C55E66;margin-top:4px;">30% of net profits</div>
       </div>
       <div style="background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:14px;">
         <div style="font-size:9px;color:#3B82F688;letter-spacing:1.5px;margin-bottom:6px;">📈 REINVESTED</div>
-        <div style="font-family:var(--head);font-size:18px;font-weight:700;color:var(--blue);">₹${fmtL(totalReinvested)}</div>
+        <div style="font-family:var(--head);font-size:18px;font-weight:700;color:var(--blue);">${CURR_SYMBOL}${fmtL(totalReinvested)}</div>
         <div style="font-size:9px;color:#3B82F666;margin-top:4px;">70% compounding</div>
       </div>
       <div style="background:var(--red-dim);border:1px solid #4A1A1A;border-radius:12px;padding:14px;">
         <div style="font-size:9px;color:#EF444488;letter-spacing:1.5px;margin-bottom:6px;">💸 CHARGES</div>
-        <div style="font-family:var(--head);font-size:18px;font-weight:700;color:var(--red);">−₹${fmtL(totalBrok)}</div>
+        <div style="font-family:var(--head);font-size:18px;font-weight:700;color:var(--red);">−${CURR_SYMBOL}${fmtL(totalBrok)}</div>
         <div style="font-size:9px;color:#EF444466;margin-top:4px;">${days.filter(d=>d.brokerage>0).length} days logged</div>
       </div>
     </div>
@@ -3541,25 +3549,25 @@ function renderStats(){
             </div>
             <div>
               <div class="progress-bar-wrap" style="height:4px;margin-bottom:2px;"><div class="progress-bar-fill" style="width:${barW}%;background:${m.net>=0?'var(--green)':'var(--red)'};"></div></div>
-              <div style="font-size:9px;color:var(--text3);">₹${fmtL(m.endCap)}</div>
+              <div style="font-size:9px;color:var(--text3);">${CURR_SYMBOL}${fmtL(m.endCap)}</div>
             </div>
             <div style="text-align:right;font-size:11px;font-weight:700;color:${m.net>=0?'var(--green)':'var(--red)'};">${fmtPnl(m.net,true)}</div>
-            <div style="text-align:right;font-size:10px;color:var(--red);">${m.brok>0?'−₹'+fmtL(m.brok):'—'}</div>
-            <div style="text-align:right;font-size:10px;color:${m.withdraw>0?'var(--green)':'var(--text3)'};">${m.withdraw>0?'₹'+fmtL(m.withdraw):'—'}</div>
-            <div style="text-align:right;font-size:10px;color:${m.net>0?'var(--blue)':'var(--red)'};">${m.net>0?'₹'+fmtL(m.reinvest):fmtPnl(m.reinvest,true)}</div>
+            <div style="text-align:right;font-size:10px;color:var(--red);">${m.brok>0?'−'+CURR_SYMBOL+fmtL(m.brok):'—'}</div>
+            <div style="text-align:right;font-size:10px;color:${m.withdraw>0?'var(--green)':'var(--text3)'};">${m.withdraw>0?CURR_SYMBOL+fmtL(m.withdraw):'—'}</div>
+            <div style="text-align:right;font-size:10px;color:${m.net>0?'var(--blue)':'var(--red)'};">${m.net>0?CURR_SYMBOL+fmtL(m.reinvest):fmtPnl(m.reinvest,true)}</div>
           </div>
           <span style="font-size:9px;padding:1px 8px;border-radius:8px;background:${m.endCap>=m.planEnd?'var(--green-dim)':'var(--red-dim)'};border:1px solid ${m.endCap>=m.planEnd?'#1A4A2A':'#4A1A1A'};color:${m.endCap>=m.planEnd?'var(--green)':'var(--red)'};">
-            vs plan ₹${fmtL(m.planEnd)} · ${m.endCap>=m.planEnd?'▲ Ahead':'▼ Behind'} ₹${fmtL(Math.abs(m.endCap-m.planEnd))}
+            vs plan ${CURR_SYMBOL}${fmtL(m.planEnd)} · ${m.endCap>=m.planEnd?'▲ Ahead':'▼ Behind'} ${CURR_SYMBOL}${fmtL(Math.abs(m.endCap-m.planEnd))}
           </span>
         </div>`;
       }).join('')}
       <div style="display:grid;grid-template-columns:60px 1fr 60px 52px 52px 52px;gap:4px;padding:8px 0 0;border-top:1px solid var(--border2);margin-top:4px;">
         <div style="font-size:10px;font-weight:700;color:var(--gold);">TOTAL</div>
-        <div style="font-size:10px;font-weight:700;color:var(--gold);">₹${fmtL(actualCap)}</div>
+        <div style="font-size:10px;font-weight:700;color:var(--gold);">${CURR_SYMBOL}${fmtL(actualCap)}</div>
         <div style="text-align:right;font-size:10px;font-weight:700;color:${net>=0?'var(--green)':'var(--red)'};">${fmtPnl(net,true)}</div>
-        <div style="text-align:right;font-size:10px;color:var(--red);">−₹${fmtL(totalBrok)}</div>
-        <div style="text-align:right;font-size:10px;color:var(--green);">₹${fmtL(totalWithdrawn)}</div>
-        <div style="text-align:right;font-size:10px;color:var(--blue);">₹${fmtL(totalReinvested)}</div>
+        <div style="text-align:right;font-size:10px;color:var(--red);">−${CURR_SYMBOL}${fmtL(totalBrok)}</div>
+        <div style="text-align:right;font-size:10px;color:var(--green);">${CURR_SYMBOL}${fmtL(totalWithdrawn)}</div>
+        <div style="text-align:right;font-size:10px;color:var(--blue);">${CURR_SYMBOL}${fmtL(totalReinvested)}</div>
       </div>
     </div>
 
@@ -3574,7 +3582,7 @@ function renderStats(){
         ['Avg Win Net',    fmtPnl(avgWin,true),                                      'var(--green)'],
         ['Avg Loss Net',   fmtPnl(avgLoss,true),                                     'var(--red)'],
         ['Profit Factor',  losses.length&&avgLoss?(Math.abs(avgWin)/Math.abs(avgLoss)).toFixed(2)+'x':'—','var(--gold)'],
-        ['Total Charges',  '−₹'+fmtL(totalBrok),                                    'var(--red)'],
+        ['Total Charges',  '−'+CURR_SYMBOL+fmtL(totalBrok),                                    'var(--red)'],
       ].map(([l,v,c])=>`<div class="card card-pad">
         <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:0.5px;margin-bottom:6px;">${l}</div>
         <div style="font-family:var(--head);font-size:18px;font-weight:700;color:${c};">${v}</div>
@@ -3715,7 +3723,7 @@ function renderGrowth(){
         const y = scaleY(v);
         const label = Math.abs(v)>=100000 ? (v/100000).toFixed(1)+'L' : Math.abs(v)>=1000?(v/1000).toFixed(0)+'K':v.toFixed(0);
         gridLines += `<line x1="${PAD.l}" y1="${y}" x2="${W-PAD.r}" y2="${y}" stroke="#1a1a2e" stroke-width="1"/>
-          <text x="${PAD.l-6}" y="${y+4}" text-anchor="end" fill="#555570" font-size="9" font-family="JetBrains Mono,monospace">₹${label}</text>`;
+          <text x="${PAD.l-6}" y="${y+4}" text-anchor="end" fill="#555570" font-size="9" font-family="JetBrains Mono,monospace">${CURR_SYMBOL}${label}</text>`;
       }
     }
 
@@ -3825,7 +3833,7 @@ function renderGrowth(){
         <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px;">
           <div>
             <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:3px;">ACCOUNT BALANCE</div>
-            <div style="font-family:var(--head);font-size:36px;font-weight:800;color:var(--gold);letter-spacing:-1px;line-height:1;">₹${fmtL(currentCap)}</div>
+            <div style="font-family:var(--head);font-size:36px;font-weight:800;color:var(--gold);letter-spacing:-1px;line-height:1;">${CURR_SYMBOL}${fmtL(currentCap)}</div>
             <div style="font-size:11px;color:var(--text3);margin-top:3px;">In account · 70% reinvested</div>
             <div style="font-size:12px;margin-top:4px;color:${totalNet>=0?'var(--green)':'var(--red)'};font-weight:600;">
               ${totalNet>=0?'▲':'▼'} ${fmtPnl(totalNet,true)} (${growthPct}%) net P&L
@@ -3834,7 +3842,7 @@ function renderGrowth(){
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;text-align:center;">
             <div style="background:var(--card);border-radius:10px;padding:8px 12px;">
               <div style="font-size:9px;color:var(--text3);font-weight:600;margin-bottom:3px;">START</div>
-              <div style="font-family:var(--head);font-size:14px;color:var(--text2);">₹${fmtL(INITIAL_CAPITAL)}</div>
+              <div style="font-family:var(--head);font-size:14px;color:var(--text2);">${CURR_SYMBOL}${fmtL(INITIAL_CAPITAL)}</div>
             </div>
             <div style="background:${currentCap>=planFinal?'var(--green-dim)':'var(--red-dim)'};border:1px solid ${currentCap>=planFinal?'#1A4A2A':'#4A1A1A'};border-radius:10px;padding:8px 12px;">
               <div style="font-size:9px;color:var(--text3);font-weight:600;margin-bottom:3px;">VS PLAN</div>
@@ -3845,9 +3853,9 @@ function renderGrowth(){
         <!-- Progress to 1Cr -->
         <div style="margin-top:14px;">
           <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-            <span style="font-size:10px;color:var(--text3);">₹5L</span>
+            <span style="font-size:10px;color:var(--text3);">${CURR_SYMBOL}${fmtL(INITIAL_CAPITAL)}</span>
             <span style="font-size:11px;color:var(--gold);font-weight:700;">${((currentCap/TARGET)*100).toFixed(2)}% to ₹1 Crore</span>
-            <span style="font-size:10px;color:var(--text3);">₹1Cr</span>
+            <span style="font-size:10px;color:var(--text3);">${CURR_SYMBOL}${fmtL(TARGET)}</span>
           </div>
           <div class="progress-bar-wrap" style="height:8px;">
             <div class="progress-bar-fill" style="width:${Math.max((currentCap/TARGET)*100,0.5)}%;background:linear-gradient(90deg,var(--gold),#F0D868);"></div>
@@ -3857,11 +3865,11 @@ function renderGrowth(){
 
       ${[
         ['💰 Gross P&L',   fmtPnl(totalGross,true),  totalGross>=0?'var(--green)':'var(--red)'],
-        ['💸 Charges',     '−₹'+fmtL(totalBrok),     'var(--red)'],
+        ['💸 Charges',     '−'+CURR_SYMBOL+fmtL(totalBrok),     'var(--red)'],
         ['✅ Net P&L',     fmtPnl(totalNet,true),     totalNet>=0?'var(--green)':'var(--red)'],
         ['📉 Max Drawdown',maxDD.toFixed(1)+'%',      'var(--red)'],
-        ['🏦 Withdrawn',   '₹'+fmtL(totalWithdrawn), 'var(--green)'],
-        ['🔄 Reinvested',  '₹'+fmtL(totalReinvested),'var(--blue)'],
+        ['🏦 Withdrawn',   CURR_SYMBOL+fmtL(totalWithdrawn), 'var(--green)'],
+        ['🔄 Reinvested',  CURR_SYMBOL+fmtL(totalReinvested), 'var(--blue)'],
         ['🔥 Best Streak', winStreak+' days',         'var(--green)'],
         ['❄️ Loss Streak', lossStreak+' days',        'var(--red)'],
       ].map(([l,v,c])=>`
@@ -3933,7 +3941,7 @@ function renderGrowth(){
 
         const fmt = v => {
           const a = Math.abs(v);
-          return a >= 100000 ? (v/100000).toFixed(1)+'L' : a >= 1000 ? (v/1000).toFixed(0)+'K' : Math.round(v).toString();
+          return CURR_SYMBOL+(a >= 100000 ? (v/100000).toFixed(1)+'L' : a >= 1000 ? (v/1000).toFixed(0)+'K' : Math.round(v).toString());
         };
 
         let svgContent = '';
@@ -3990,11 +3998,11 @@ function renderGrowth(){
           </div>
           <div style="text-align:center;border-left:1px solid var(--border);border-right:1px solid var(--border);">
             <div style="font-size:9px;color:var(--green);font-weight:600;margin-bottom:3px;text-transform:uppercase;">💰 Total Withdrawn</div>
-            <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--green);">₹${fmtL(totalWithdrawn)}</div>
+            <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--green);">${CURR_SYMBOL}${fmtL(totalWithdrawn)}</div>
           </div>
           <div style="text-align:center;">
             <div style="font-size:9px;color:var(--blue);font-weight:600;margin-bottom:3px;text-transform:uppercase;">🔄 Total Reinvested</div>
-            <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--blue);">₹${fmtL(totalReinvested)}</div>
+            <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--blue);">${CURR_SYMBOL}${fmtL(totalReinvested)}</div>
           </div>
         </div>`;
       })()}
@@ -4016,7 +4024,7 @@ function renderGrowth(){
         const wr = m.days>0 ? Math.round(m.wins/m.days*100) : 0;
         const maxNet = monthData.reduce((mx,x)=>Math.max(mx,Math.abs(x.net)),1);
         const barW = Math.min(Math.round((Math.abs(m.net)/maxNet)*100),100);
-        const netDisplay = isNaN(m.net) ? '₹0' : fmtPnl(m.net,true);
+        const netDisplay = isNaN(m.net) ? CURR_SYMBOL+'0' : fmtPnl(m.net,true);
         return `
         <div style="padding:9px 0;border-bottom:${isLast?'none':'1px solid var(--border)'};">
           <div style="display:grid;grid-template-columns:72px 1fr 64px 56px 56px;gap:4px;align-items:center;margin-bottom:5px;">
@@ -4033,17 +4041,17 @@ function renderGrowth(){
               <div style="font-family:var(--head);font-size:14px;font-weight:700;color:${(m.net||0)>=0?'var(--green)':'var(--red)'};margin-top:2px;">${netDisplay}</div>
             </div>
             <div style="text-align:right;">
-              <div style="font-size:11px;color:var(--red);font-weight:600;">${m.brok>0?'−₹'+fmtL(m.brok):'—'}</div>
+              <div style="font-size:11px;color:var(--red);font-weight:600;">${m.brok>0?'−'+CURR_SYMBOL+fmtL(m.brok):'—'}</div>
             </div>
             <div style="text-align:right;">
               ${m.profit>0
-                ?`<div style="font-size:11px;font-weight:700;color:var(--green);">₹${fmtL(m.withdraw)}</div>
+                ?`<div style="font-size:11px;font-weight:700;color:var(--green);">${CURR_SYMBOL}${fmtL(m.withdraw)}</div>
                   <div style="font-size:9px;color:var(--green);opacity:.6;">pocket</div>`
                 :`<div style="font-size:10px;color:var(--text3);">—</div>`}
             </div>
             <div style="text-align:right;">
               ${m.profit>0
-                ?`<div style="font-size:11px;font-weight:700;color:var(--blue);">₹${fmtL(m.reinvest)}</div>
+                ?`<div style="font-size:11px;font-weight:700;color:var(--blue);">${CURR_SYMBOL}${fmtL(m.reinvest)}</div>
                   <div style="font-size:9px;color:var(--blue);opacity:.6;">back in</div>`
                 :`<div style="font-size:10px;color:var(--red);">${fmtPnl(m.profit||0,true)}</div>
                   <div style="font-size:9px;color:var(--text3);">absorbed</div>`}
@@ -4056,9 +4064,9 @@ function renderGrowth(){
       <div style="display:grid;grid-template-columns:72px 1fr 64px 56px 56px;gap:4px;padding:10px 0 0;border-top:1px solid var(--border2);margin-top:2px;">
         <div style="font-size:11px;font-weight:700;color:var(--gold);">TOTAL</div>
         <div style="font-family:var(--head);font-size:13px;font-weight:700;color:${totalNet>=0?'var(--green)':'var(--red)'};">${fmtPnl(totalNet,true)}</div>
-        <div style="text-align:right;font-size:11px;color:var(--red);font-weight:600;">−₹${fmtL(totalBrok)}</div>
-        <div style="text-align:right;font-family:var(--head);font-size:13px;font-weight:700;color:var(--green);">₹${fmtL(totalWithdrawn)}</div>
-        <div style="text-align:right;font-family:var(--head);font-size:13px;font-weight:700;color:var(--blue);">₹${fmtL(totalReinvested)}</div>
+        <div style="text-align:right;font-size:11px;color:var(--red);font-weight:600;">−${CURR_SYMBOL}${fmtL(totalBrok)}</div>
+        <div style="text-align:right;font-family:var(--head);font-size:13px;font-weight:700;color:var(--green);">${CURR_SYMBOL}${fmtL(totalWithdrawn)}</div>
+        <div style="text-align:right;font-family:var(--head);font-size:13px;font-weight:700;color:var(--blue);">${CURR_SYMBOL}${fmtL(totalReinvested)}</div>
       </div>
     </div>
   `;
@@ -4084,11 +4092,11 @@ function renderPrediction(){
 
   // Milestones: plan month vs actual status
   const milestones = [
-    {label:'₹10L', emoji:'💫', val:1000000},
-    {label:'₹25L', emoji:'⭐', val:2500000},
-    {label:'₹50L', emoji:'🌟', val:5000000},
-    {label:'₹75L', emoji:'✨', val:7500000},
-    {label:'₹1Cr', emoji:'🏆', val:TARGET},
+    {label:CURR_SYMBOL+fmtL(1000000), emoji:'💫', val:1000000},
+    {label:CURR_SYMBOL+fmtL(2500000), emoji:'⭐', val:2500000},
+    {label:CURR_SYMBOL+fmtL(5000000), emoji:'🌟', val:5000000},
+    {label:CURR_SYMBOL+fmtL(7500000), emoji:'✨', val:7500000},
+    {label:CURR_SYMBOL+fmtL(TARGET), emoji:'🏆', val:TARGET},
   ];
 
   const totalNet = Object.values(journal).reduce((s,d)=>s+netOf(d),0);
@@ -4118,7 +4126,7 @@ function renderPrediction(){
           <div style="font-size:16px;font-weight:800;color:${isAhead?'var(--green)':'var(--red)'};">
             ${isAhead ? '▲ AHEAD OF PLAN 🔥' : '▼ BEHIND PLAN'}
           </div>
-          <div style="font-size:12px;color:var(--text3);margin-top:3px;">by ₹${fmtL(diff)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:3px;">by ${CURR_SYMBOL}${fmtL(diff)}</div>
         </div>
         <div style="width:56px;height:56px;border-radius:50%;background:${isAhead?'var(--green-dim)':'var(--red-dim)'};border:2px solid ${isAhead?'var(--green)':'var(--red)'};display:flex;align-items:center;justify-content:center;font-size:24px;">
           ${isAhead?'🚀':'⚠️'}
@@ -4130,7 +4138,7 @@ function renderPrediction(){
         <!-- Plan -->
         <div style="background:rgba(245,200,66,0.07);border:1px solid rgba(245,200,66,0.2);border-radius:12px;padding:14px;">
           <div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:1px;margin-bottom:6px;">📋 PLAN SAYS</div>
-          <div style="font-family:var(--head);font-size:20px;font-weight:800;color:var(--gold);line-height:1;">₹${fmtL(planNow)}</div>
+          <div style="font-family:var(--head);font-size:20px;font-weight:800;color:var(--gold);line-height:1;">${CURR_SYMBOL}${fmtL(planNow)}</div>
           <div style="font-size:10px;color:var(--text3);margin-top:5px;">${sc.label} strategy</div>
           <div style="font-size:10px;color:var(--text3);">${(sc.dailyTarget*100).toFixed(1)}%/day target</div>
         </div>
@@ -4139,17 +4147,17 @@ function renderPrediction(){
         <!-- Actual -->
         <div style="background:${isAhead?'rgba(34,197,94,0.08)':'rgba(239,68,68,0.08)'};border:1px solid ${isAhead?'#1A4A2A':'#4A1A1A'};border-radius:12px;padding:14px;">
           <div style="font-size:10px;color:${isAhead?'var(--green)':'var(--red)'};font-weight:700;letter-spacing:1px;margin-bottom:6px;">💰 YOU HAVE</div>
-          <div style="font-family:var(--head);font-size:20px;font-weight:800;color:${isAhead?'var(--green)':'var(--red)'};line-height:1;">₹${fmtL(accountBal)}</div>
+          <div style="font-family:var(--head);font-size:20px;font-weight:800;color:${isAhead?'var(--green)':'var(--red)'};line-height:1;">${CURR_SYMBOL}${fmtL(accountBal)}</div>
           <div style="font-size:10px;color:var(--text3);margin-top:5px;">In account</div>
-          <div style="font-size:10px;color:var(--green);">+ ₹${fmtL(totalWithdrawn)} withdrawn</div>
+          <div style="font-size:10px;color:var(--green);">+ ${CURR_SYMBOL}${fmtL(totalWithdrawn)} withdrawn</div>
         </div>
       </div>
 
       <!-- Progress bar -->
       <div style="margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-          <span style="font-size:10px;color:var(--text3);">Start ₹${fmtL(INITIAL_CAPITAL)}</span>
-          <span style="font-size:11px;color:var(--gold);font-weight:700;">${((accountBal/TARGET)*100).toFixed(2)}% to ₹${fmtL(TARGET)}</span>
+          <span style="font-size:10px;color:var(--text3);">Start ${CURR_SYMBOL}${fmtL(INITIAL_CAPITAL)}</span>
+          <span style="font-size:11px;color:var(--gold);font-weight:700;">${((accountBal/TARGET)*100).toFixed(2)}% to ${CURR_SYMBOL}${fmtL(TARGET)}</span>
           <span style="font-size:10px;color:var(--text3);">Target</span>
         </div>
         <!-- Combined progress bar -->
@@ -4160,9 +4168,9 @@ function renderPrediction(){
           <div style="width:${Math.max((accountBal/TARGET)*100,0.5).toFixed(1)}%;height:100%;background:${isAhead?'var(--green)':'var(--red)'};border-radius:99px;position:relative;z-index:2;transition:width .8s;"></div>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:6px;">
-          <span style="font-size:10px;color:${isAhead?'var(--green)':'var(--red)'};">● You: ₹${fmtL(accountBal)}</span>
-          <span style="font-size:10px;color:var(--gold);">│ Plan: ₹${fmtL(planNow)}</span>
-          <span style="font-size:10px;color:var(--text3);">₹${fmtL(TARGET-accountBal)} left</span>
+          <span style="font-size:10px;color:${isAhead?'var(--green)':'var(--red)'};">● You: ${CURR_SYMBOL}${fmtL(accountBal)}</span>
+          <span style="font-size:10px;color:var(--gold);">│ Plan: ${CURR_SYMBOL}${fmtL(planNow)}</span>
+          <span style="font-size:10px;color:var(--text3);">${CURR_SYMBOL}${fmtL(TARGET-accountBal)} left</span>
         </div>
       </div>
     </div>
@@ -4211,7 +4219,7 @@ function renderPrediction(){
               <span>📋 Plan: <b style="color:var(--gold);">${planDate}</b></span>
               ${reached
                 ? `<span>✅ <b style="color:var(--green);">Done!</b></span>`
-                : `<span>You: <b style="color:var(--text2);">₹${fmtL(accountBal)} / ₹${fmtL(m.val)}</b></span>`}
+                : `<span>You: <b style="color:var(--text2);">${CURR_SYMBOL}${fmtL(accountBal)} / ${CURR_SYMBOL}${fmtL(m.val)}</b></span>`}
             </div>
           </div>
         </div>`;
@@ -4226,11 +4234,11 @@ function renderPrediction(){
       </div>
       <div style="background:rgba(34,197,94,0.08);border:1px solid #1A4A2A;border-radius:12px;padding:12px;text-align:center;">
         <div style="font-size:9px;color:var(--green);font-weight:600;margin-bottom:5px;">WITHDRAWN</div>
-        <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--green);">₹${fmtL(totalWithdrawn)}</div>
+        <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--green);">${CURR_SYMBOL}${fmtL(totalWithdrawn)}</div>
       </div>
       <div style="background:rgba(59,130,246,0.08);border:1px solid #1A2A4A;border-radius:12px;padding:12px;text-align:center;">
         <div style="font-size:9px;color:var(--blue);font-weight:600;margin-bottom:5px;">IN ACCOUNT</div>
-        <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--blue);">₹${fmtL(accountBal)}</div>
+        <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--blue);">${CURR_SYMBOL}${fmtL(accountBal)}</div>
       </div>
     </div>
     `}
@@ -4324,8 +4332,8 @@ function renderSetPreview(){
     <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Preview (${sc.label} plan)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       ${[
-        ['Starting Capital','₹'+fmtL(cap),         'var(--gold)'],
-        ['Target',          '₹'+fmtL(tgt),          'var(--green)'],
+        ['Starting Capital',CURR_SYMBOL+fmtL(cap),         'var(--gold)'],
+        ['Target',          CURR_SYMBOL+fmtL(tgt),          'var(--green)'],
         ['Growth needed',   multiplier+'x',          'var(--blue)'],
         ['Daily goal',      fmtPnl(dailyGoal,true),  'var(--text2)'],
         ['Monthly goal',    fmtPnl(monthGoal,true),  'var(--text2)'],
@@ -4453,17 +4461,3 @@ document.addEventListener('click', function(e) {
   }
 });
 </script>
-<!-- CUSTOM CONFIRM MODAL -->
-<div id="confirm-modal">
-  <div id="confirm-box">
-    <div style="font-size:32px;margin-bottom:12px;">🗑️</div>
-    <div id="confirm-msg" style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;font-family:var(--head);"></div>
-    <div id="confirm-sub" style="font-size:12px;color:var(--text3);font-weight:500;margin-bottom:24px;font-family:var(--mono);"></div>
-    <div style="display:flex;gap:10px;">
-      <button id="confirm-cancel" style="flex:1;padding:12px;border-radius:12px;background:transparent;border:1px solid var(--border2);color:var(--text2);cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;">Cancel</button>
-      <button id="confirm-ok" style="flex:1;padding:12px;border-radius:12px;background:var(--red-dim);border:1px solid #4A1A1A;color:var(--red);cursor:pointer;font-family:var(--font);font-size:13px;font-weight:700;">Delete</button>
-    </div>
-  </div>
-</div>
-</body>
-</html>
