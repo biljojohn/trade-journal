@@ -901,7 +901,9 @@ async function syncToCloud(){
       indian: JSON.parse(localStorage.getItem(SETTINGS_KEY+'-indian') || '{}'),
       usd: JSON.parse(localStorage.getItem(SETTINGS_KEY+'-usd') || '{}')
     };
-    allJournals[activeMarketKey()] = journal || {};
+    allJournals.indian = sanitizeJournalForMarket('indian', allJournals.indian || {});
+    allJournals.usd = sanitizeJournalForMarket('usd', allJournals.usd || {});
+    allJournals[activeMarketKey()] = sanitizeJournalForMarket(activeMarketKey(), journal || {});
     allSettings[activeMarketKey()] = {
       market: activeMarketKey(), currency: MARKET_CONFIG[activeMarketKey()].code,
       initialCapital: INITIAL_CAPITAL, target: TARGET, userName: USER_NAME,
@@ -944,7 +946,8 @@ async function syncFromCloud(){
       try{
         const localJournal = JSON.parse(localStorage.getItem(STORAGE_KEY+'-'+key) || '{}');
         const cloudJournal = cloudJournals[key] || {};
-        const chosenJournal = Object.keys(cloudJournal).length ? cloudJournal : localJournal;
+        let chosenJournal = Object.keys(cloudJournal).length ? cloudJournal : localJournal;
+        chosenJournal = sanitizeJournalForMarket(key, chosenJournal);
         localStorage.setItem(STORAGE_KEY+'-'+key, JSON.stringify(chosenJournal));
 
         const localSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY+'-'+key) || '{}');
@@ -1117,8 +1120,60 @@ function calcTotalWithdrawn(){
   return Object.values(byMonth).reduce((s,v)=>s+(v>0?v*0.30:0),0);
 }
 
+// -- Market workspace safety: keep INR and USD journals fully separated --
+function journalLooksLikeIndianData(obj){
+  try{
+    if(!obj || typeof obj !== 'object' || Object.keys(obj).length===0) return false;
+    const indianRe = /\b(NIFTY|BANKNIFTY|SENSEX|FINNIFTY|MIDCAP|GIFT\s*NIFTY)\b/i;
+    const usdRe    = /\b(BTC|ETH|XAUUSD|XAU|GOLD|EURUSD|GBPUSD|USDJPY|NAS100|US30|US500|SPX|DXY|FOREX|CRYPTO)\b/i;
+    let rowCount=0, indianHits=0, usdHits=0, chartIndianHits=0, chartUsdHits=0;
+    Object.values(obj).forEach(d=>{
+      (d.rows||[]).forEach(r=>{
+        const sym = String(r.sym || r.symbol || '').toUpperCase();
+        if(!sym) return;
+        rowCount++;
+        if(indianRe.test(sym)) indianHits++;
+        if(usdRe.test(sym)) usdHits++;
+      });
+      const charts = d.charts || {};
+      Object.keys(charts).forEach(k=>{
+        if(charts[k]){
+          if(/nifty|sensex|banknifty|gift/i.test(k)) chartIndianHits++;
+          if(/btc|eth|gold|xau|eurusd|gbpusd|nas100|us30|custom/i.test(k)) chartUsdHits++;
+        }
+      });
+    });
+    if(usdHits>0 || chartUsdHits>0) return false;
+    if(indianHits>0 && indianHits>=Math.max(1,rowCount)*0.5) return true;
+    if(chartIndianHits>0 && chartUsdHits===0) return true;
+    return false;
+  }catch(e){ return false; }
+}
+
+function sanitizeJournalForMarket(key,obj){
+  obj = obj || {};
+  if(key !== 'usd') return obj;
+  if(journalLooksLikeIndianData(obj)){
+    try{
+      localStorage.setItem(STORAGE_KEY+'-usd-contaminated-inr-backup-'+Date.now(), JSON.stringify(obj));
+      localStorage.setItem(STORAGE_KEY+'-usd', '{}');
+    }catch(e){}
+    return {};
+  }
+  return obj;
+}
+
 // -- Persist --
-function loadJournal() { try { migrateLegacyLocalData(); const d=localStorage.getItem(marketJournalKey()); journal = d ? JSON.parse(d) : {}; } catch(e){ journal = {}; } }
+function loadJournal() {
+  try {
+    migrateLegacyLocalData();
+    const key = activeMarketKey();
+    const d=localStorage.getItem(marketJournalKey());
+    journal = d ? JSON.parse(d) : {};
+    journal = sanitizeJournalForMarket(key, journal);
+    if(key==='usd') localStorage.setItem(marketJournalKey(), JSON.stringify(journal));
+  } catch(e){ journal = {}; }
+}
 
 // ======================================================
 //  NAV
