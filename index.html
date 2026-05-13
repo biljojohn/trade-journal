@@ -396,19 +396,43 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
           <div id="charges-manual-panel" style="display:none;">
             <div style="background:var(--card2);border:1px solid var(--border2);border-radius:14px;padding:16px;margin-bottom:14px;">
               <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">Enter Charges by Date</div>
-              <div style="font-size:11px;color:var(--text3);line-height:1.6;">Pick a date from your journal and enter the total charges (brokerage + STT + GST + all fees).</div>
+              <div style="font-size:11px;color:var(--text3);line-height:1.6;">Simple editable form. Type any date and total charges. It saves only to the selected INR or USD market.</div>
             </div>
 
-            <!-- Date picker from journal -->
-            <div style="margin-bottom:12px;">
-              <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px;">SELECT DATE</div>
-              <select id="manual-date-select" onclick="if(this.showPicker)this.showPicker()" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;cursor:pointer;"
-                onchange="renderManualChargesForm()">
+            <div class="card card-pad" style="margin-bottom:14px;border-color:var(--border2);">
+              <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Date</div>
+              <input type="text" id="charge-entry-date" inputmode="numeric" autocomplete="off"
+                placeholder="YYYY-MM-DD  or  DD/MM/YYYY"
+                style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:13px 14px;font-size:16px;color:var(--text);font-family:var(--mono);outline:none;min-height:50px;"
+                onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border2)'" oninput="renderManualChargesForm()"/>
+              <div style="display:flex;gap:8px;margin-top:8px;">
+                <button type="button" onclick="setChargeDateToday()" class="btn-ghost" style="flex:1;min-height:38px;">Today</button>
+                <button type="button" onclick="clearChargeForm()" class="btn-ghost" style="flex:1;min-height:38px;">Clear</button>
+              </div>
+            </div>
+
+            <div style="margin-bottom:14px;">
+              <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Optional: Pick Existing Journal Day</div>
+              <select id="manual-date-select" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;cursor:pointer;min-height:46px;"
+                onchange="fillChargeDateFromSelect()">
                 <option value="">— Pick a trading day —</option>
               </select>
             </div>
 
-            <div id="manual-charges-form"></div>
+            <div class="card card-pad" style="border-color:#4A1A1A;">
+              <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Total Charges</div>
+              <div style="position:relative;margin-bottom:12px;">
+                <span id="charge-entry-symbol" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:16px;font-weight:700;">₹</span>
+                <input type="number" id="charge-entry-total" min="0" step="0.01" inputmode="decimal" autocomplete="off"
+                  placeholder="Enter total brokerage / tax / fees"
+                  style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:13px 14px 13px 34px;font-size:18px;color:var(--text);font-family:var(--mono);outline:none;min-height:52px;"
+                  onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border2)'" oninput="renderManualChargesForm()"/>
+              </div>
+              <textarea id="charge-entry-note" placeholder="Optional note" style="width:100%;min-height:58px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text);font-family:var(--font);outline:none;resize:vertical;line-height:1.5;margin-bottom:12px;" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+              <div id="manual-charges-form" style="font-size:12px;color:var(--text3);line-height:1.7;margin-bottom:12px;min-height:20px;"></div>
+              <button type="button" onclick="saveManualChargesDirect()" style="width:100%;padding:14px;background:var(--red);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);letter-spacing:.4px;">Save Charges</button>
+              <div id="manual-charges-status" style="margin-top:10px;text-align:center;font-size:12px;min-height:16px;"></div>
+            </div>
           </div>
         </div>
 
@@ -3117,128 +3141,136 @@ function switchChargesMethod(method){
 function populateManualDateSelect(){
   const sel = document.getElementById('manual-date-select');
   if(!sel) return;
-  const dates = Object.keys(journal).sort().reverse();
+  const dates = Object.keys(journal || {}).sort().reverse();
   sel.innerHTML = '<option value="">— Pick a trading day —</option>' +
     dates.map(d=>{
-      const brok = journal[d].brokerage||0;
-      return `<option value="${d}">${d}  ${brok>0?'('+CURR_SYMBOL+Math.round(brok)+' charges)':'(no charges)'}  ${fmtPnl(journal[d].pnl,true)}</option>`;
+      const j = journal[d] || {};
+      const brok = Number(j.brokerage || 0);
+      const pnlTxt = typeof fmtPnl === 'function' ? fmtPnl(j.pnl || 0, true) : String(j.pnl || 0);
+      return `<option value="${d}">${d}  ${brok>0?'('+formatCurrencyAmount(brok)+' charges)':'(no charges)'}  ${pnlTxt}</option>`;
     }).join('');
+  updateChargesCurrencyUI();
+  renderManualChargesForm();
+}
+
+function updateChargesCurrencyUI(){
+  const sym = (typeof CURR_SYMBOL !== 'undefined' && CURR_SYMBOL) ? CURR_SYMBOL : (activeMarket === 'USD' ? '$' : '₹');
+  const el = document.getElementById('charge-entry-symbol');
+  if(el) el.textContent = sym;
+}
+
+function formatCurrencyAmount(n){
+  const sym = (typeof CURR_SYMBOL !== 'undefined' && CURR_SYMBOL) ? CURR_SYMBOL : (activeMarket === 'USD' ? '$' : '₹');
+  const val = Math.abs(Number(n) || 0);
+  if(sym === '$') return '$' + val.toLocaleString(undefined,{maximumFractionDigits:2});
+  if(typeof fmtInr === 'function') return fmtInr(val);
+  return '₹' + val.toLocaleString('en-IN',{maximumFractionDigits:2});
+}
+
+function normalizeChargeDate(raw){
+  raw = String(raw || '').trim();
+  if(!raw) return '';
+  // Already ISO yyyy-mm-dd
+  let m = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(m){
+    const y=+m[1], mo=+m[2], d=+m[3];
+    if(mo>=1&&mo<=12&&d>=1&&d<=31) return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  }
+  // UK/India style dd/mm/yyyy or dd-mm-yyyy
+  m = raw.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  if(m){
+    const d=+m[1], mo=+m[2], y=+m[3];
+    if(mo>=1&&mo<=12&&d>=1&&d<=31) return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  }
+  return '';
+}
+
+function getManualChargeDate(){
+  const dateEl = document.getElementById('charge-entry-date');
+  return normalizeChargeDate(dateEl ? dateEl.value : '');
+}
+
+function fillChargeDateFromSelect(){
+  const sel = document.getElementById('manual-date-select');
+  const dateEl = document.getElementById('charge-entry-date');
+  if(sel && sel.value && dateEl){
+    dateEl.value = sel.value;
+    const j = journal[sel.value] || {};
+    const totalEl = document.getElementById('charge-entry-total');
+    if(totalEl && Number(j.brokerage || 0) > 0) totalEl.value = j.brokerage;
+  }
+  renderManualChargesForm();
+}
+
+function setChargeDateToday(){
+  const d = new Date();
+  const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const dateEl = document.getElementById('charge-entry-date');
+  if(dateEl) dateEl.value = iso;
+  renderManualChargesForm();
+}
+
+function clearChargeForm(){
+  ['charge-entry-date','charge-entry-total','charge-entry-note'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const sel=document.getElementById('manual-date-select'); if(sel) sel.value='';
+  const st=document.getElementById('manual-charges-status'); if(st) st.textContent='';
   renderManualChargesForm();
 }
 
 function renderManualChargesForm(){
-  const sel  = document.getElementById('manual-date-select');
-  const form = document.getElementById('manual-charges-form');
-  if(!sel||!form) return;
-  const date = sel.value;
-  if(!date||!journal[date]){ form.innerHTML=''; return; }
-
-  const d    = journal[date];
-  const brok = d.brokerage||0;
-  const bd   = d.brokerageBreakdown||{};
-  const net  = d.pnl - brok;
-
-  form.innerHTML=`
-    <div style="background:var(--card);border:1px solid ${brok>0?'#4A1A1A':'var(--border2)'};border-radius:14px;padding:16px;margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <div>
-          <div style="font-size:12px;color:var(--text3);font-weight:600;margin-bottom:3px;">${date}</div>
-          <div style="font-family:var(--head);font-size:22px;font-weight:700;color:${d.pnl>=0?'var(--green)':'var(--red)'};">${fmtPnl(d.pnl)}</div>
-        </div>
-        ${brok>0?`<div style="text-align:right;">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:2px;">Current charges</div>
-          <div style="font-family:var(--head);font-size:16px;color:var(--red);">−${fmtInr(brok)}</div>
-          <div style="font-size:11px;color:var(--green);">Net: ${fmtPnl(net)}</div>
-        </div>`:''}
-      </div>
-
-      <!-- Individual charge fields -->
-      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Enter Charges</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
-        ${[
-          ['brokerage', 'Brokerage', '🏦'],
-          ['stt',       'STT',       '📊'],
-          ['gst',       'GST',       '🏛️'],
-          ['exchange',  'Exchange',  '🔄'],
-          ['sebi',      'SEBI',      '⚖️'],
-          ['stamp',     'Stamp',     '📮'],
-          ['dp',        'DP Charges','🏢'],
-          ['other',     'Other',     '➕'],
-        ].map(([key,label,icon])=>`
-          <div>
-            <div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:5px;">${icon} ${label}</div>
-            <div style="position:relative;">
-              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:12px;">₹</span>
-              <input type="number" id="charge-${key}" min="0" step="0.01"
-                placeholder="0"
-                value="${bd[key]||''}"
-                style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:9px 10px 9px 24px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none;"
-                onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border2)'"
-                oninput="updateManualTotal()"/>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-
-      <!-- Live total -->
-      <div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <span style="font-size:12px;color:var(--text3);">Total Charges</span>
-          <span id="manual-total-display" style="font-family:var(--head);font-size:18px;font-weight:700;color:var(--red);">₹0</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:12px;color:var(--text3);">Net P&L</span>
-          <span id="manual-net-display" style="font-family:var(--head);font-size:18px;font-weight:700;color:${d.pnl>=0?'var(--green)':'var(--red)'};">${fmtPnl(d.pnl)}</span>
-        </div>
-      </div>
-
-      <button onclick="saveManualCharges('${date}')"
-        style="width:100%;padding:13px;background:var(--red);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);transition:opacity .15s;"
-        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-        Save Charges for ${date}
-      </button>
-    </div>
-  `;
-  updateManualTotal();
+  updateChargesCurrencyUI();
+  const box = document.getElementById('manual-charges-form');
+  if(!box) return;
+  const rawDate = document.getElementById('charge-entry-date')?.value || '';
+  const date = normalizeChargeDate(rawDate);
+  const total = Math.abs(parseFloat(document.getElementById('charge-entry-total')?.value) || 0);
+  if(!rawDate.trim()){
+    box.innerHTML = 'Enter a date and total charges, then press Save Charges.';
+    return;
+  }
+  if(!date){
+    box.innerHTML = '<span style="color:var(--red);font-weight:700;">Use date format YYYY-MM-DD or DD/MM/YYYY.</span>';
+    return;
+  }
+  const pnl = journal[date] ? Number(journal[date].pnl || 0) : 0;
+  const net = pnl - total;
+  box.innerHTML = `Date: <b style="color:var(--text);">${date}</b><br/>Charges: <b style="color:var(--red);">${formatCurrencyAmount(total)}</b><br/>${journal[date] ? `Net after charges: <b style="color:${net>=0?'var(--green)':'var(--red)'};">${typeof fmtPnl==='function'?fmtPnl(net):net}</b>` : 'This will create a charges-only day if no journal entry exists.'}`;
 }
 
-function updateManualTotal(){
-  const keys = ['brokerage','stt','gst','exchange','sebi','stamp','dp','other'];
-  const total = keys.reduce((s,k)=>{
-    const el = document.getElementById('charge-'+k);
-    return s + (el ? Math.abs(parseFloat(el.value)||0) : 0);
-  }, 0);
-  const sel  = document.getElementById('manual-date-select');
-  const date = sel?.value;
-  const pnl  = date&&journal[date] ? journal[date].pnl : 0;
-  const net  = pnl - total;
-  const td = document.getElementById('manual-total-display');
-  const nd = document.getElementById('manual-net-display');
-  if(td) td.textContent = fmtInr(total);
-  if(nd){ nd.textContent=fmtPnl(net); nd.style.color=net>=0?'var(--green)':'var(--red)'; }
-}
-
-function saveManualCharges(date){
-  if(!journal[date]) return;
-  const keys = ['brokerage','stt','gst','exchange','sebi','stamp','dp','other'];
-  const breakdown = {};
-  let total = 0;
-  keys.forEach(k=>{
-    const el = document.getElementById('charge-'+k);
-    const v  = Math.abs(parseFloat(el?.value)||0);
-    if(v>0) breakdown[k]=v;
-    total += v;
-  });
+function saveManualChargesDirect(){
+  const status = document.getElementById('manual-charges-status');
+  const date = getManualChargeDate();
+  const totalEl = document.getElementById('charge-entry-total');
+  const total = Math.abs(parseFloat(totalEl?.value) || 0);
+  const note = (document.getElementById('charge-entry-note')?.value || '').trim();
+  if(!date){
+    if(status){ status.style.color='var(--red)'; status.textContent='Please enter a valid date: YYYY-MM-DD or DD/MM/YYYY'; }
+    return;
+  }
+  if(total <= 0){
+    if(status){ status.style.color='var(--red)'; status.textContent='Please enter total charges amount.'; }
+    if(totalEl) totalEl.focus();
+    return;
+  }
+  if(!journal[date]){
+    journal[date] = {date, pnl:0, brokerage:0, brokerageBreakdown:{}, trades:0, rawCount:0, instruments:[], note:'Charges only', source:'manual-charges', importedAt:new Date().toISOString()};
+  }
   journal[date].brokerage = Math.round(total*100)/100;
-  journal[date].brokerageBreakdown = breakdown;
-  saveJournal();
-  renderTopStats();
-  if(selectedDate===date) renderDayDetail();
-  // Flash button
-  const btn = document.querySelector(`button[onclick="saveManualCharges('${date}')"]`);
-  if(btn){ btn.textContent='✓ Saved!'; btn.style.background='var(--green)'; btn.style.color='#0A0A12'; }
-  setTimeout(()=>{ populateManualDateSelect(); },1200);
+  journal[date].brokerageBreakdown = {manualTotal: journal[date].brokerage};
+  if(note) journal[date].chargesNote = note;
+  journal[date].updatedAt = new Date().toISOString();
+  if(typeof saveJournal === 'function') saveJournal();
+  if(typeof renderTopStats === 'function') renderTopStats();
+  if(typeof renderCalendar === 'function') renderCalendar();
+  if(typeof selectedDate !== 'undefined' && selectedDate === date && typeof renderDayDetail === 'function') renderDayDetail();
+  if(status){ status.style.color='var(--green)'; status.textContent=`✓ Saved ${formatCurrencyAmount(total)} charges for ${date}`; }
+  populateManualDateSelect();
+  renderManualChargesForm();
 }
+
+// Backward-compatible name used by older buttons
+function saveManualCharges(date){ saveManualChargesDirect(); }
+function updateManualTotal(){ renderManualChargesForm(); }
 
 
 function renderRecent(){
