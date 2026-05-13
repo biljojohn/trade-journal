@@ -284,16 +284,16 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
         <!-- ── TRADEBOOK TAB ── -->
         <div id="panel-tradebook">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-            <div style="background:var(--green-dim);border:1px solid #1A4A2A;border-radius:14px;padding:14px;">
+            <button type="button" id="upload-mode-single" onclick="selectUploadMode('single')" style="text-align:left;background:var(--green-dim);border:1.5px solid var(--green);border-radius:14px;padding:14px;cursor:pointer;font-family:var(--font);">
               <div style="font-size:22px;margin-bottom:8px;">📅</div>
               <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:4px;">Single Day</div>
               <div style="font-size:11px;color:var(--text3);line-height:1.6;font-weight:500;">Upload after each trading session.</div>
-            </div>
-            <div style="background:var(--card2);border:1px solid var(--border2);border-radius:14px;padding:14px;">
+            </button>
+            <button type="button" id="upload-mode-year" onclick="selectUploadMode('year')" style="text-align:left;background:var(--card2);border:1.5px solid var(--border2);border-radius:14px;padding:14px;cursor:pointer;font-family:var(--font);">
               <div style="font-size:22px;margin-bottom:8px;">📆</div>
               <div style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:4px;">Full Year</div>
               <div style="font-size:11px;color:var(--text3);line-height:1.6;font-weight:500;">All days auto-split & imported at once.</div>
-            </div>
+            </button>
           </div>
 
           <div id="drop-zone"
@@ -301,8 +301,8 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
             ondragleave="this.classList.remove('drag')"
             ondrop="event.preventDefault();this.classList.remove('drag');handleFile(event.dataTransfer.files[0])">
             <span class="drop-icon">📂</span>
-            <div class="drop-title">DRAG & DROP CSV</div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:14px;">or tap the button below</div>
+            <div class="drop-title" id="drop-title">DRAG & DROP CSV</div>
+            <div id="drop-helper" style="font-size:11px;color:var(--text3);margin-bottom:14px;">or tap the button below</div>
             <label for="file-input" style="display:inline-block;padding:10px 24px;background:var(--gold);color:#07070d;border-radius:10px;font-size:12px;font-weight:700;letter-spacing:2px;cursor:pointer;font-family:inherit;">CHOOSE FILE</label>
           </div>
           <input type="file" id="file-input" accept=".csv" style="position:absolute;width:1px;height:1px;opacity:0;" onchange="handleFile(this.files[0]);this.value='';"/>
@@ -402,7 +402,7 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
             <!-- Date picker from journal -->
             <div style="margin-bottom:12px;">
               <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px;">SELECT DATE</div>
-              <select id="manual-date-select" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;cursor:pointer;"
+              <select id="manual-date-select" onclick="if(this.showPicker)this.showPicker()" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;cursor:pointer;"
                 onchange="renderManualChargesForm()">
                 <option value="">— Pick a trading day —</option>
               </select>
@@ -412,10 +412,6 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
           </div>
         </div>
 
-      </div>
-    </div>
-
-    <!-- ══ SCREEN 3: TRADE PLAN ══ -->
 
         <!-- MANUAL P&L ENTRY TAB -->
         <div id="panel-manual" style="display:none;">
@@ -425,7 +421,7 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
           </div>
           <div style="margin-bottom:14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">📅 Trading Date</div>
-            <input type="date" id="manual-entry-date" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:14px;color:var(--text);font-family:var(--mono);outline:none;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"/>
+            <input type="date" id="manual-entry-date" onclick="if(this.showPicker)this.showPicker()" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:14px;color:var(--text);font-family:var(--mono);outline:none;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"/>
           </div>
           <div style="margin-bottom:14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">💰 Gross P&amp;L</div>
@@ -457,7 +453,7 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
           </div>
           <div style="margin-bottom:14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">📝 Quick Note <span style="font-size:10px;font-weight:400;">(optional)</span></div>
-            <textarea id="manual-entry-note" placeholder="e.g. Sold NIFTY 24000 CE at 150, SL hit at 120..." style="width:100%;min-height:80px;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text);font-family:var(--font);outline:none;resize:vertical;line-height:1.6;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+            <textarea id="manual-entry-note" oninput="updateManualEntryPreview()" placeholder="e.g. Sold NIFTY 24000 CE at 150, SL hit at 120..." style="width:100%;min-height:80px;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text);font-family:var(--font);outline:none;resize:vertical;line-height:1.6;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
           </div>
           <div id="me-preview" style="background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:14px;margin-bottom:14px;font-size:12px;color:var(--text3);">Fill in date and P&amp;L to see preview</div>
           <button onclick="saveManualEntry()" style="width:100%;padding:14px;background:var(--gold);color:#0A0A12;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);letter-spacing:0.5px;">➕ Add to Journal</button>
@@ -468,6 +464,7 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
       </div>
     </div>
 
+    <!-- ══ SCREEN 3: TRADE PLAN ══ -->
     <div class="screen" id="screen-plan">
       <div style="padding:16px 14px;">
 
@@ -1468,12 +1465,32 @@ function calcPnL(trades) {
 // ======================================================
 //  FILE UPLOAD — handles single day & full year CSVs
 // ======================================================
+let uploadImportMode = 'single';
+
+function selectUploadMode(mode){
+  uploadImportMode = (mode === 'year') ? 'year' : 'single';
+  const single = document.getElementById('upload-mode-single');
+  const year   = document.getElementById('upload-mode-year');
+  const title  = document.getElementById('drop-title');
+  const helper = document.getElementById('drop-helper');
+  if(single){
+    single.style.border = uploadImportMode==='single' ? '1.5px solid var(--green)' : '1.5px solid var(--border2)';
+    single.style.background = uploadImportMode==='single' ? 'var(--green-dim)' : 'var(--card2)';
+  }
+  if(year){
+    year.style.border = uploadImportMode==='year' ? '1.5px solid var(--blue)' : '1.5px solid var(--border2)';
+    year.style.background = uploadImportMode==='year' ? 'var(--blue-dim)' : 'var(--card2)';
+  }
+  if(title) title.textContent = uploadImportMode==='year' ? 'FULL YEAR CSV' : 'SINGLE DAY CSV';
+  if(helper) helper.textContent = uploadImportMode==='year' ? 'Upload 01 Apr – 31 Mar tradebook CSV' : 'Upload one trading day CSV';
+}
+
 function handleFile(file) {
   const st=document.getElementById('upload-status');
   if(!file||!file.name.toLowerCase().endsWith('.csv')){
     st.innerHTML='<div class="status-box status-err">✗ Invalid file. Must be a .csv</div>'; return;
   }
-  st.innerHTML='<div class="status-box" style="background:#0c0c1a;border:1px solid var(--border);color:var(--muted);">⏳ Parsing file…</div>';
+  st.innerHTML='<div class="status-box" style="background:#0c0c1a;border:1px solid var(--border);color:var(--muted);">⏳ Parsing '+(uploadImportMode==='year'?'full year':'single day')+' file…</div>';
   const reader=new FileReader();
   reader.onload=e=>{
     const parsed=parseFyersCSV(e.target.result);
@@ -1503,6 +1520,7 @@ function handleFile(file) {
     // Show summary
     const brokerName = parsed.broker || 'Unknown';
     const totalDays=dates.length;
+    const modeNote = uploadImportMode==='single' && totalDays>1 ? '<div style="font-size:10px;color:var(--gold);margin-top:6px;">ℹ Multiple days detected, imported all days. Use Full Year next time for yearly CSV.</div>' : (uploadImportMode==='year' ? '<div style="font-size:10px;color:var(--blue);margin-top:6px;">📆 Full Year mode selected.</div>' : '');
     const totalPnl=dates.filter(d=>!skippedDates.includes(d)).reduce((s,d)=>s+(journal[d]?.pnl||0),0);
     const winDays=dates.filter(d=>!skippedDates.includes(d)&&(journal[d]?.pnl||0)>0).length;
 
@@ -1534,6 +1552,7 @@ function handleFile(file) {
         </div>
         ${parsed.dateRange?`<div style="font-size:10px;color:#4ade8088;">📅 ${parsed.dateRange.from} → ${parsed.dateRange.to}</div>`:''}
         ${skipped>0?`<div style="font-size:10px;color:var(--gold);margin-top:6px;">⚠ ${skipped} day(s) skipped (already existed)</div>`:''}
+        ${modeNote}
       </div>`;
 
     setTimeout(()=>showScreen('journal',document.querySelectorAll('.nav-item')[0]), 1200);
@@ -2918,7 +2937,7 @@ function switchUploadTab(tab){
   const ch = document.getElementById('tab-charges');
   const me = document.getElementById('tab-manual');
   [tb,ch,me].forEach(b=>{ if(b){ b.style.border='1.5px solid var(--border2)'; b.style.background='transparent'; b.style.color='var(--text3)'; }});
-  if(isTB){ tb.style.border='1.5px solid var(--gold)'; tb.style.background='var(--gold-dim)'; tb.style.color='var(--gold)'; }
+  if(isTB){ tb.style.border='1.5px solid var(--gold)'; tb.style.background='var(--gold-dim)'; tb.style.color='var(--gold)'; setTimeout(()=>selectUploadMode(uploadImportMode||'single'),0); }
   if(isCH){ ch.style.border='1.5px solid var(--red)'; ch.style.background='var(--red-dim)'; ch.style.color='var(--red)'; populateManualDateSelect(); }
   if(isME){ me.style.border='1.5px solid #a78bfa'; me.style.background='rgba(139,92,246,0.1)'; me.style.color='#a78bfa';
     // Set today's date and update symbol
@@ -4600,6 +4619,12 @@ function clearAllData(){
 //  INIT
 // ======================================================
 
+function escapeHtml(str){
+  return String(str ?? '').replace(/[&<>"']/g, function(ch){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
+
 // ======================================================
 //  MANUAL P&L ENTRY
 // ======================================================
@@ -4640,10 +4665,27 @@ function removeManualInstrument(sym){
 function renderManualInstrumentTags(){
   const el = document.getElementById('me-instrument-tags');
   if(!el) return;
-  el.innerHTML = manualInstruments.map(function(sym){
+  el.innerHTML = manualInstruments.map(function(sym, idx){
     return '<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--card);border:1px solid var(--border2);border-radius:20px;font-size:12px;font-weight:600;color:var(--text2);">'+
-    sym+' <span onclick="manualInstruments=manualInstruments.filter(function(s){return s!==\''+sym+'\';});renderManualInstrumentTags();updateManualEntryPreview();" style="cursor:pointer;color:var(--text3);font-size:14px;line-height:1;">&times;</span></span>';
+      '<button type="button" onclick="editManualInstrument('+idx+')" style="background:transparent;border:none;color:var(--text2);font:inherit;cursor:pointer;padding:0;">'+escapeHtml(sym)+'</button>'+
+      '<button type="button" onclick="removeManualInstrumentByIndex('+idx+')" style="background:transparent;border:none;cursor:pointer;color:var(--text3);font-size:14px;line-height:1;padding:0;">&times;</button></span>';
   }).join('');
+}
+
+function removeManualInstrumentByIndex(idx){
+  manualInstruments.splice(idx,1);
+  renderManualInstrumentTags();
+  updateManualEntryPreview();
+}
+
+function editManualInstrument(idx){
+  const inp = document.getElementById('manual-entry-instrument');
+  if(!inp || !manualInstruments[idx]) return;
+  inp.value = manualInstruments[idx];
+  manualInstruments.splice(idx,1);
+  renderManualInstrumentTags();
+  updateManualEntryPreview();
+  inp.focus();
 }
 
 function updateManualEntryPreview(){
@@ -4695,8 +4737,10 @@ function saveManualEntry(){
 
   saveJournal();
   renderTopStats();
+  renderRecent();
   const [y,m] = date.split('-').map(Number);
   calYear=y; calMonth=m-1;
+  renderCalendar();
 
   if(status){ status.style.color='var(--green)'; status.textContent='\u2705 Added '+date+' to journal!'; }
 
@@ -4744,6 +4788,7 @@ function initApp(){
   renderTopStats();
   renderCalendar();
   renderRecent();
+  selectUploadMode('single');
 
   // Show onboarding on very first launch
   if(isFirstLaunch()) showOnboarding();
