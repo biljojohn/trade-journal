@@ -817,8 +817,11 @@ async function initAuth(){
   try {
     const result = await getRedirectResult(fb.auth);
     if(result && result.user) {
+      currentUser = result.user;
       hideAuthModal();
-      showToast('Signed in with Google ✓');
+      showToast('Signed in as ' + (result.user.displayName || result.user.email) + ' ✓');
+      updateAuthUI();
+      await syncFromCloud();
     }
   } catch(e) { 
     console.warn('redirect result error', e); 
@@ -827,6 +830,9 @@ async function initAuth(){
   onAuthStateChanged(fb.auth, async user=>{
     currentUser = user;
     updateAuthUI();
+    // Force update of settings card after a delay (in case screen not rendered yet)
+    setTimeout(function(){ if(typeof refreshSettingsAuth==='function') refreshSettingsAuth(); }, 300);
+    setTimeout(function(){ if(typeof refreshSettingsAuth==='function') refreshSettingsAuth(); }, 1500);
     if(currentUser) await syncFromCloud();
   });
 }
