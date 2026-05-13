@@ -152,16 +152,17 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
   }
   /* Content: offset for fixed nav + topbar */
   #content{
-    margin-left:88px;
-    height:100vh; height:100dvh;
+    position:fixed !important;
+    left:88px !important; right:0 !important; top:0; bottom:0;
     overflow:hidden;
-    position:relative;
+    min-width:0;
   }
+  /* Extra padding so content never touches the nav border */
+  .screen > div { min-width:0; }
   /* Screens fill content area */
   .screen{
     position:absolute;top:0;left:0;right:0;bottom:0;
     padding-bottom:0;
-    /* Will be offset for topbar height via JS or padding-top */
   }
   /* Nav items */
   .nav-item{
@@ -965,8 +966,12 @@ let activeScenario = 'moderate';
 let activePlanTab = 'roadmap';
 let planMonth = 1;
 
-const STORAGE_KEY = 'fyers-journal-v3';
-const SETTINGS_KEY = 'fyers-settings-v1';
+// Per-market storage keys — each market gets its own isolated data
+function getStorageKey()  { return 'fyers-journal-v3-'  + (MARKET_MODE || 'indian'); }
+function getSettingsKey() { return 'fyers-settings-v1-' + (MARKET_MODE || 'indian'); }
+// Aliases for legacy code that uses the constants directly (will be replaced below)
+Object.defineProperty(window, 'STORAGE_KEY',  { get: getStorageKey });
+Object.defineProperty(window, 'SETTINGS_KEY', { get: getSettingsKey });
 const TPM = 22;
 
 // -- Dynamic capital settings -- (overridden after loadSettings)
@@ -974,11 +979,27 @@ let INITIAL_CAPITAL = 500000;
 let TARGET          = 10000000;
 let USER_NAME       = 'Trader';
 
+// Per-market capital defaults (used when no saved settings exist)
+function getMarketDefaults(){
+  const cfg = MARKET_CONFIG && MARKET_CONFIG[MARKET_MODE];
+  if(cfg) return { capital: cfg.capitalDefault, target: cfg.planTargetDefault };
+  return { capital: 500000, target: 10000000 };
+}
+
 function loadSettings(){
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}');
-    if(s.initialCapital && s.initialCapital > 0) INITIAL_CAPITAL = s.initialCapital;
-    if(s.target && s.target > 0) TARGET = s.target;
+    if(s.initialCapital && s.initialCapital > 0) {
+      INITIAL_CAPITAL = s.initialCapital;
+    } else {
+      // No saved settings for this market — use market-appropriate defaults
+      INITIAL_CAPITAL = getMarketDefaults().capital;
+    }
+    if(s.target && s.target > 0) {
+      TARGET = s.target;
+    } else {
+      TARGET = getMarketDefaults().target;
+    }
     if(s.userName !== undefined) USER_NAME = s.userName || 'Trader';
   } catch(e){}
 }
@@ -4742,6 +4763,7 @@ function renderManualEntryRecent(){
 // Wrap init in DOMContentLoaded to ensure DOM is ready
 function initApp(){
   loadMarketMode();  // load mode first so storage keys correct
+  migrateOldData();  // migrate legacy data to per-market keys
   loadSettings();
   loadJournal();
 
@@ -4765,18 +4787,39 @@ function initApp(){
   window.addEventListener('resize', adjustDesktopLayout);
 }
 
+// Migrate old (pre-market-isolation) data to indian market key
+function migrateOldData(){
+  try {
+    var OLD_JOURNAL  = 'fyers-journal-v3';
+    var OLD_SETTINGS = 'fyers-settings-v1';
+    var NEW_JOURNAL  = 'fyers-journal-v3-indian';
+    var NEW_SETTINGS = 'fyers-settings-v1-indian';
+    // Only migrate if new key doesn't exist yet but old key does
+    if(!localStorage.getItem(NEW_JOURNAL) && localStorage.getItem(OLD_JOURNAL)){
+      localStorage.setItem(NEW_JOURNAL, localStorage.getItem(OLD_JOURNAL));
+      console.log('[Migration] Journal data migrated to indian key');
+    }
+    if(!localStorage.getItem(NEW_SETTINGS) && localStorage.getItem(OLD_SETTINGS)){
+      localStorage.setItem(NEW_SETTINGS, localStorage.getItem(OLD_SETTINGS));
+      console.log('[Migration] Settings migrated to indian key');
+    }
+  } catch(e){ console.warn('Migration error', e); }
+}
+
 function adjustDesktopLayout(){
   if(window.innerWidth < 768) return;
   var topbar = document.getElementById('topbar');
   var content = document.getElementById('content');
   var nav = document.getElementById('bottomnav');
   if(!topbar || !content) return;
-  // Wait for topbar to have content
   requestAnimationFrame(function(){
     var h = topbar.getBoundingClientRect().height;
     if(h < 10) h = 70; // fallback
-    content.style.paddingTop = h + 'px';
-    if(nav) nav.style.paddingTop = (h + 10) + 'px';
+    // content is position:fixed, offset its top below the topbar
+    content.style.top = h + 'px';
+    content.style.left = '88px'; // ensure nav offset maintained
+    // nav items start below topbar
+    if(nav) nav.style.paddingTop = (h + 6) + 'px';
   });
 }
 
