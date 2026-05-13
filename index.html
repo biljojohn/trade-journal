@@ -123,8 +123,9 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
   .nav-item{flex:none;padding:18px 4px;}
   .nav-item.active::before{top:auto;left:0;bottom:50%;transform:translateY(50%);width:3px;height:36px;border-radius:0 4px 4px 0;}
   #app{flex-direction:row;}
-  #topbar{display:none;}
+  #topbar{display:block;}
   #nav-auth-btn{display:flex!important;}
+  #nav-market-switcher{display:flex!important;}
 }
 </style>
 </head>
@@ -631,8 +632,12 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
       <span class="nav-label">Highlights</span>
     </button>
 
+    <!-- Market switcher - visible on desktop sidebar -->
+    <div id="nav-market-switcher" style="display:none;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-top:1px solid var(--border);">
+    </div>
+
     <!-- Auth button - visible on desktop sidebar -->
-    <div id="nav-auth-btn" style="display:none;flex-direction:column;align-items:center;margin-top:auto;padding:16px 4px;border-top:1px solid var(--border);">
+    <div id="nav-auth-btn" style="display:none;flex-direction:column;align-items:center;padding:10px 4px;border-top:1px solid var(--border);">
       <button id="auth-btn-nav" onclick="currentUser ? signOut() : showAuthModal()"
         style="background:var(--gold-dim);border:1px solid rgba(245,200,66,0.3);border-radius:10px;color:var(--gold);font-size:9px;font-weight:700;cursor:pointer;font-family:var(--font);padding:8px 6px;width:64px;text-align:center;letter-spacing:0.3px;">
         Sign In
@@ -2154,31 +2159,51 @@ const MARKET_CONFIG = {
 let CURR_SYMBOL = '₹';
 
 function renderMarketSwitcher(){
-  var sw = document.getElementById('topbar-market-switcher');
-  if(!sw) return;
   var modes = [
     {key:'indian',     cfg:MARKET_CONFIG.indian},
     {key:'forex',      cfg:MARKET_CONFIG.forex},
     {key:'crypto',     cfg:MARKET_CONFIG.crypto},
     {key:'commodities',cfg:MARKET_CONFIG.commodities}
   ];
-  var html = '';
-  modes.forEach(function(m){
-    var isActive = MARKET_MODE === m.key;
-    var borderCol = isActive ? m.cfg.color : 'var(--border2)';
-    var bgCol     = isActive ? 'rgba(99,99,99,0.18)' : 'var(--card)';
-    var textCol   = isActive ? m.cfg.color : 'var(--text3)';
-    var extra     = isActive ? ' (' + m.cfg.sym + ')' : '';
-    html += '<button onclick="setMarketMode(\'' + m.key + '\')" ';
-    html += 'style="flex-shrink:0;padding:6px 12px;border-radius:20px;';
-    html += 'border:1.5px solid ' + borderCol + ';';
-    html += 'background:' + bgCol + ';';
-    html += 'cursor:pointer;font-family:var(--font);font-size:11px;font-weight:700;';
-    html += 'color:' + textCol + ';transition:all .15s;-webkit-tap-highlight-color:transparent;white-space:nowrap;">';
-    html += m.cfg.flag + ' ' + m.cfg.name + extra;
-    html += '</button>';
-  });
-  sw.innerHTML = html;
+
+  // Top bar (mobile/tablet)
+  var sw = document.getElementById('topbar-market-switcher');
+  if(sw){
+    var html = '';
+    modes.forEach(function(m){
+      var isActive = MARKET_MODE === m.key;
+      html += '<button onclick="setMarketMode(\'' + m.key + '\')" ';
+      html += 'style="flex-shrink:0;padding:6px 12px;border-radius:20px;';
+      html += 'border:1.5px solid ' + (isActive ? m.cfg.color : 'var(--border2)') + ';';
+      html += 'background:' + (isActive ? 'rgba(99,99,99,0.18)' : 'var(--card)') + ';';
+      html += 'cursor:pointer;font-family:var(--font);font-size:11px;font-weight:700;';
+      html += 'color:' + (isActive ? m.cfg.color : 'var(--text3)') + ';';
+      html += 'transition:all .15s;-webkit-tap-highlight-color:transparent;white-space:nowrap;">';
+      html += m.cfg.flag + ' ' + m.cfg.name + (isActive ? ' (' + m.cfg.sym + ')' : '');
+      html += '</button>';
+    });
+    sw.innerHTML = html;
+  }
+
+  // Sidebar nav (desktop)
+  var nav = document.getElementById('nav-market-switcher');
+  if(nav){
+    var navHtml = '<div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;text-align:center;">Market</div>';
+    modes.forEach(function(m){
+      var isActive = MARKET_MODE === m.key;
+      navHtml += '<button onclick="setMarketMode(\'' + m.key + '\')" title="' + m.cfg.name + '" ';
+      navHtml += 'style="width:64px;padding:5px 2px;border-radius:8px;';
+      navHtml += 'border:1.5px solid ' + (isActive ? m.cfg.color : 'var(--border2)') + ';';
+      navHtml += 'background:' + (isActive ? 'rgba(99,99,99,0.18)' : 'transparent') + ';';
+      navHtml += 'cursor:pointer;font-size:10px;font-weight:700;';
+      navHtml += 'color:' + (isActive ? m.cfg.color : 'var(--text3)') + ';';
+      navHtml += 'transition:all .15s;-webkit-tap-highlight-color:transparent;text-align:center;display:block;margin-bottom:3px;">';
+      navHtml += '<div style="font-size:15px;line-height:1.3;">' + m.cfg.flag + '</div>';
+      navHtml += '<div style="font-size:8px;">' + m.cfg.sym + '</div>';
+      navHtml += '</button>';
+    });
+    nav.innerHTML = navHtml;
+  }
 }
 
 function setMarketMode(mode){
@@ -4658,23 +4683,33 @@ function renderManualEntryRecent(){
     }).join('');
 }
 
-loadMarketMode();  // load mode first so storage keys correct
-loadSettings();
-loadJournal();
+// Wrap init in DOMContentLoaded to ensure DOM is ready
+function initApp(){
+  loadMarketMode();  // load mode first so storage keys correct
+  loadSettings();
+  loadJournal();
 
-// Set topbar name & market switcher
-document.getElementById('top-sub').textContent = (USER_NAME||'Trader') + ' · ' + (MARKET_MODE==='indian'?'Indian Market':'USD Market');
-renderMarketSwitcher();
+  // Set topbar name & market switcher
+  var subEl = document.getElementById('top-sub');
+  if(subEl) subEl.textContent = (USER_NAME||'Trader') + ' · ' + (MARKET_MODE==='indian'?'Indian Market':'USD Market');
+  renderMarketSwitcher();
 
-renderTopStats();
-renderCalendar();
-renderRecent();
+  renderTopStats();
+  renderCalendar();
+  renderRecent();
 
-// Show onboarding on very first launch
-if(isFirstLaunch()) showOnboarding();
+  // Show onboarding on very first launch
+  if(isFirstLaunch()) showOnboarding();
 
-// Start cloud sync if Supabase is configured
-initAuth();
+  // Start cloud sync
+  initAuth();
+}
+
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
 
 // -- EVENT DELEGATION --
 document.addEventListener('click', function(e) {
