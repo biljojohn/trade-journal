@@ -441,38 +441,24 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
           <div style="margin-bottom:16px;">
             <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;">Starting Capital</div>
             <div style="position:relative;">
-              <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;font-weight:600;">₹</span>
+              <span id="cap-sym" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;font-weight:600;">₹</span>
               <input id="set-capital" type="number" min="1000"
                 style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:12px 14px 12px 28px;font-size:16px;color:var(--text);font-family:var(--mono);outline:none;"
                 onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"/>
             </div>
-            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-              <button onclick="document.getElementById('set-capital').value='100000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹1L</button>
-              <button onclick="document.getElementById('set-capital').value='200000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹2L</button>
-              <button onclick="document.getElementById('set-capital').value='500000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹5L</button>
-              <button onclick="document.getElementById('set-capital').value='1000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹10L</button>
-              <button onclick="document.getElementById('set-capital').value='2500000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹25L</button>
-              <button onclick="document.getElementById('set-capital').value='5000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹50L</button>
-            </div>
+            <div id="cap-btns" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;"></div>
           </div>
 
           <!-- Target -->
           <div style="margin-bottom:16px;">
             <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;">Target Amount</div>
             <div style="position:relative;">
-              <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;font-weight:600;">₹</span>
+              <span id="tgt-sym" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;font-weight:600;">₹</span>
               <input id="set-target" type="number" min="1000"
                 style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:12px 14px 12px 28px;font-size:16px;color:var(--text);font-family:var(--mono);outline:none;"
                 onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"/>
             </div>
-            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-              <button onclick="document.getElementById('set-target').value='1000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹10L</button>
-              <button onclick="document.getElementById('set-target').value='2500000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹25L</button>
-              <button onclick="document.getElementById('set-target').value='5000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹50L</button>
-              <button onclick="document.getElementById('set-target').value='10000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹1Cr</button>
-              <button onclick="document.getElementById('set-target').value='20000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹2Cr</button>
-              <button onclick="document.getElementById('set-target').value='50000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹5Cr</button>
-            </div>
+            <div id="tgt-btns" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;"></div>
           </div>
 
           <!-- Live preview -->
@@ -2093,30 +2079,12 @@ const MARKET_CONFIG = {
 let CURR_SYMBOL = '₹';
 
 function setMarketMode(mode){
-  MARKET_MODE  = mode;
-  CURR_SYMBOL  = MARKET_CONFIG[mode].sym;
-  // Save to settings
+  MARKET_MODE = mode;
+  CURR_SYMBOL = MARKET_CONFIG[mode].sym;
+  // Save mode only — never auto-change capital or target
   try{ localStorage.setItem('market_mode', mode); }catch(e){}
 
-  // Update capital & target defaults when switching markets
   const cfg = MARKET_CONFIG[mode];
-  if(mode !== 'indian'){
-    // Check if current capital looks like Indian (> 50000 = likely rupees)
-    if(INITIAL_CAPITAL > 50000){
-      INITIAL_CAPITAL = cfg.capitalDefault;
-      TARGET = cfg.planTargetDefault;
-      saveSettings(INITIAL_CAPITAL, TARGET, USER_NAME);
-    }
-  } else {
-    // Switching back to Indian — if capital looks like USD (< 50000)
-    if(INITIAL_CAPITAL < 50000){
-      INITIAL_CAPITAL = 500000;
-      TARGET = 10000000;
-      saveSettings(INITIAL_CAPITAL, TARGET, USER_NAME);
-    }
-  }
-
-  // Update UI
   showToast(cfg.flag+' Switched to '+cfg.name+' · '+cfg.sym+(mode==='indian'?' INR':' USD'));
   renderTopStats(); renderCalendar();
   if(document.getElementById('screen-plan').classList.contains('active')) renderPlan();
@@ -4292,6 +4260,30 @@ function renderSettingsScreen(){
     const el=document.getElementById(id);
     if(el){ el.removeEventListener('input',renderSetPreview); el.addEventListener('input',renderSetPreview); }
   });
+  // Render dynamic capital/target quick-pick buttons based on market mode
+  const capBtns = document.getElementById('cap-btns');
+  const tgtBtns = document.getElementById('tgt-btns');
+  if(capBtns){
+    const isIndian = MARKET_MODE === 'indian';
+    const capPicks = isIndian
+      ? [[100000,'₹1L'],[200000,'₹2L'],[500000,'₹5L'],[1000000,'₹10L'],[2500000,'₹25L'],[5000000,'₹50L']]
+      : [[1000,'$1K'],[5000,'$5K'],[10000,'$10K'],[25000,'$25K'],[50000,'$50K'],[100000,'$100K']];
+    capBtns.innerHTML = capPicks.map(([v,l])=>
+      `<button onclick="document.getElementById('set-capital').value='${v}';renderSetPreview()"
+        style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">${l}</button>`
+    ).join('');
+  }
+  if(tgtBtns){
+    const isIndian = MARKET_MODE === 'indian';
+    const tgtPicks = isIndian
+      ? [[1000000,'₹10L'],[2500000,'₹25L'],[5000000,'₹50L'],[10000000,'₹1Cr'],[20000000,'₹2Cr'],[50000000,'₹5Cr']]
+      : [[10000,'$10K'],[25000,'$25K'],[50000,'$50K'],[100000,'$100K'],[250000,'$250K'],[500000,'$500K']];
+    tgtBtns.innerHTML = tgtPicks.map(([v,l])=>
+      `<button onclick="document.getElementById('set-target').value='${v}';renderSetPreview()"
+        style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">${l}</button>`
+    ).join('');
+  }
+
   // Render market mode section dynamically
   const mms = document.getElementById('market-mode-section');
   if(mms){
@@ -4323,11 +4315,17 @@ function renderSetPreview(){
   const cap = parseFloat(document.getElementById('set-capital')?.value)||INITIAL_CAPITAL;
   const tgt = parseFloat(document.getElementById('set-target')?.value)||TARGET;
   const sc  = SCENARIOS[activeScenario]||SCENARIOS.moderate;
+  const sym = CURR_SYMBOL||'₹';
   const dailyGoal  = cap * sc.dailyTarget;
   const monthGoal  = dailyGoal * TPM;
   const multiplier = (tgt/cap).toFixed(1);
   const el = document.getElementById('set-preview');
   if(!el) return;
+  // Update currency symbol on input boxes
+  const capSym = document.getElementById('cap-sym');
+  const tgtSym = document.getElementById('tgt-sym');
+  if(capSym) capSym.textContent = sym;
+  if(tgtSym) tgtSym.textContent = sym;
   el.innerHTML=`
     <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Preview (${sc.label} plan)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
