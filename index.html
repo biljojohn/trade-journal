@@ -117,17 +117,15 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
 /* Responsive */
 @media(min-width:768px){#topbar{padding:18px 28px 0;}.screen{padding-bottom:28px;}input,textarea,select{font-size:13px;}}
 @media(min-width:1024px){
-  #app{
-    -webkit-flex-direction:row;
-    flex-direction:row;
-  }
   #bottomnav{
-    -webkit-flex-shrink:0;flex-shrink:0;
-    -webkit-flex-direction:column;flex-direction:column;
+    position:fixed;left:0;top:0;bottom:0;
     width:88px;
+    -webkit-flex-direction:column;flex-direction:column;
     border-top:none;
     border-right:1px solid var(--border);
     padding:20px 0 0;
+    overflow-y:auto;
+    z-index:50;
   }
   .nav-item{flex:none;padding:18px 4px;}
   .nav-item.active::before{
@@ -136,38 +134,19 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
     width:3px;height:36px;
     border-radius:0 4px 4px 0;
   }
-  #main-col{
-    -webkit-flex:1;flex:1;
-    min-width:0;
-    display:-webkit-flex;display:flex;
-    -webkit-flex-direction:column;flex-direction:column;
-    overflow:hidden;
-  }
-  #topbar{
-    display:block;
-    -webkit-flex-shrink:0;flex-shrink:0;
-  }
+  #app{padding-left:88px;}
+  #topbar{display:block;}
   #topbar-market-switcher{display:none!important;}
   #sync-status{display:none!important;}
-  #content{
-    -webkit-flex:1;flex:1;
-    overflow:hidden;
-    position:relative;
-    display:block;
-  }
-  .screen{
-    position:absolute;
-    top:0;left:0;right:0;bottom:0;
-    overflow-y:auto;
-    padding-bottom:20px;
-  }
   #nav-auth-btn{display:flex!important;}
-  #nav-market-switcher{display:flex!important;}
+  #nav-market-switcher{display:none!important;}
 }
 </style>
 </head>
 <body>
 <div id="app">
+
+    <!-- BOTTOM NAV -->
   <nav id="bottomnav">
     <button class="nav-item active" onclick="showScreen('journal',this)">
       <span class="nav-icon">📅</span>
@@ -217,7 +196,6 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
   </nav>
 
 
-  <div id="main-col">
   <!-- TOP BAR (mobile/tablet only) -->
   <div id="topbar">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -682,9 +660,7 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
     </div>
 
   </div><!-- /content -->
-  </div><!-- /main-col -->
 
-  <!-- BOTTOM NAV -->
 
 </div><!-- /app -->
 
@@ -2157,7 +2133,7 @@ function acceptPolished(date){
 //  MULTI-MARKET MODE
 //  indian | forex | crypto | commodities
 // ======================================================
-let MARKET_MODE = 'indian'; // default
+let MARKET_MODE = 'indian';
 
 // Currency symbols & labels per market
 const MARKET_CONFIG = {
@@ -2168,37 +2144,13 @@ const MARKET_CONFIG = {
     uploadHint: 'Fyers, Zerodha, Upstox, Angel, Groww, ICICI etc.',
     planTargetDefault: 10000000, capitalDefault: 500000,
     color: '#f97316'
-  },
-  forex: {
-    sym: '$', name: 'Forex', flag: '💱',
-    instruments: ['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD','USD/CHF','NZD/USD','GBP/JPY'],
-    chartLabels: {nifty:'EUR/USD',niftyCe:'GBP/USD',niftyPe:'USD/JPY',sensex:'AUD/USD',sensexCe:'USD/CAD',sensexPe:'USD/CHF',banknifty:'NZD/USD',giftNifty:'GBP/JPY'},
-    uploadHint: 'MT4/MT5 CSV, cTrader, OANDA, IC Markets etc.',
-    planTargetDefault: 100000, capitalDefault: 10000,
-    color: '#3B82F6'
-  },
-  crypto: {
-    sym: '$', name: 'Crypto', flag: '₿',
-    instruments: ['BTC/USDT','ETH/USDT','BNB/USDT','SOL/USDT','XRP/USDT','ADA/USDT','DOGE/USDT','AVAX/USDT'],
-    chartLabels: {nifty:'BTC/USDT',niftyCe:'BTC Long',niftyPe:'BTC Short',sensex:'ETH/USDT',sensexCe:'ETH Long',sensexPe:'ETH Short',banknifty:'BNB/USDT',giftNifty:'SOL/USDT'},
-    uploadHint: 'Binance, Coinbase, Bybit, Kraken CSV etc.',
-    planTargetDefault: 100000, capitalDefault: 5000,
-    color: '#F5C842'
-  },
-  commodities: {
-    sym: '$', name: 'Commodities', flag: '🥇',
-    instruments: ['GOLD','SILVER','CRUDE OIL','NATURAL GAS','COPPER','PLATINUM'],
-    chartLabels: {nifty:'GOLD/USD',niftyCe:'GOLD Long',niftyPe:'GOLD Short',sensex:'SILVER/USD',sensexCe:'SILVER Long',sensexPe:'SILVER Short',banknifty:'CRUDE OIL',giftNifty:'NAT GAS'},
-    uploadHint: 'MT4/MT5, Interactive Brokers, TD Ameritrade CSV etc.',
-    planTargetDefault: 100000, capitalDefault: 10000,
-    color: '#F5C842'
   }
-};
+}
 
 // Dynamic currency symbol — always reads from current mode
 let CURR_SYMBOL = '₹';
 
-function renderMarketSwitcher(){
+function renderMarketSwitcher(){ var sw=document.getElementById("nav-market-switcher"); if(sw)sw.style.display="none"; return;
   var modes = [
     {key:'indian',     cfg:MARKET_CONFIG.indian},
     {key:'forex',      cfg:MARKET_CONFIG.forex},
@@ -4442,7 +4394,7 @@ function refreshSettingsAuth(){
   }
 }
 
-function renderSettingsScreen(){
+function renderSettingsScreen(){ var mk=document.getElementById("market-mode-section"); if(mk)mk.style.display="none";
   const cn = document.getElementById('set-capital');
   const tn = document.getElementById('set-target');
   const nn = document.getElementById('set-name');
