@@ -799,11 +799,11 @@ async function getFirebase(){
   try{
     const {initializeApp, getApps} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
     const {getFirestore, doc, setDoc, getDoc} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    const {getAuth, onAuthStateChanged, signInWithPopup, signOut:fbSignOut, GoogleAuthProvider} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+    const {getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, signOut:fbSignOut, GoogleAuthProvider} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
     _firebaseApp = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
     _db   = getFirestore(_firebaseApp);
     _auth = getAuth(_firebaseApp);
-    window._fbModules = {doc, setDoc, getDoc, onAuthStateChanged, signInWithPopup, fbSignOut, GoogleAuthProvider};
+    window._fbModules = {doc, setDoc, getDoc, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, fbSignOut, GoogleAuthProvider};
     return {db:_db, auth:_auth};
   }catch(e){ console.warn('Firebase load failed',e); return null; }
 }
@@ -811,7 +811,19 @@ async function getFirebase(){
 async function initAuth(){
   const fb = await getFirebase();
   if(!fb) return;
-  const {onAuthStateChanged} = window._fbModules;
+  const {onAuthStateChanged, getRedirectResult} = window._fbModules;
+  
+  // Handle Google redirect result on page load (for mobile sign-in)
+  try {
+    const result = await getRedirectResult(fb.auth);
+    if(result && result.user) {
+      hideAuthModal();
+      showToast('Signed in with Google ✓');
+    }
+  } catch(e) { 
+    console.warn('redirect result error', e); 
+  }
+  
   onAuthStateChanged(fb.auth, async user=>{
     currentUser = user;
     updateAuthUI();
@@ -842,15 +854,22 @@ function updateAuthUI(){
 async function signInWithGoogle(){
   const fb = await getFirebase();
   if(!fb){ showToast('Firebase not loaded'); return; }
-  const {signInWithPopup, GoogleAuthProvider} = window._fbModules;
+  const {signInWithPopup, signInWithRedirect, GoogleAuthProvider} = window._fbModules;
   try{
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(fb.auth, provider);
-    hideAuthModal();
-    showToast('Signed in with Google ✓');
+    // Use redirect on mobile (popups blocked), popup on desktop
+    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+    if(isMobile){
+      await signInWithRedirect(fb.auth, provider);
+    } else {
+      await signInWithPopup(fb.auth, provider);
+      hideAuthModal();
+      showToast('Signed in with Google ✓');
+    }
   }catch(e){
     console.warn('Google sign in error', e);
-    document.getElementById('auth-error').textContent = e.message;
+    var errEl = document.getElementById('auth-error');
+    if(errEl) errEl.textContent = e.message;
   }
 }
 
