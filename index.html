@@ -117,36 +117,26 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
 /* Responsive */
 /* MOBILE — force bottom nav at bottom of viewport */
 @media(max-width:767px){
+  /* Mobile: HTML order is topbar → content → bottomnav already */
   #app{
-    display:-webkit-flex !important;
-    display:flex !important;
-    -webkit-flex-direction:column !important;
-    flex-direction:column !important;
-    height:100vh;
-    height:100dvh;
-    height:-webkit-fill-available;
+    display:-webkit-flex;display:flex;
+    -webkit-flex-direction:column;flex-direction:column;
+    height:100vh;height:100dvh;height:-webkit-fill-available;
   }
   #topbar{
-    -webkit-order:1 !important; order:1 !important;
-    -webkit-flex-shrink:0; flex-shrink:0;
+    -webkit-flex-shrink:0;flex-shrink:0;
   }
   #content{
-    -webkit-order:2 !important; order:2 !important;
-    -webkit-flex:1 !important; flex:1 !important;
-    overflow:hidden;
-    position:relative;
-    min-height:0;
+    -webkit-flex:1;flex:1;
+    overflow:hidden;position:relative;min-height:0;
   }
   #bottomnav{
-    -webkit-order:3 !important; order:3 !important;
-    -webkit-flex-shrink:0; flex-shrink:0;
-    position:sticky;
-    bottom:0;
+    -webkit-flex-shrink:0;flex-shrink:0;
+    background:var(--bg2);
+    border-top:1px solid var(--border);
     z-index:50;
   }
-  .screen{
-    padding-bottom:80px !important;
-  }
+  .screen{padding-bottom:80px;}
 }
 @media(min-width:768px){#topbar{padding:18px 28px 0;}.screen{padding-bottom:28px;}input,textarea,select{font-size:13px;}}
 @media(min-width:1024px){
@@ -209,54 +199,6 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
 <body>
 <div id="app">
 
-    <!-- BOTTOM NAV -->
-  <nav id="bottomnav">
-    <button class="nav-item active" onclick="showScreen('journal',this)">
-      <span class="nav-icon">📅</span>
-      <span class="nav-label">Journal</span>
-    </button>
-    <button class="nav-item" onclick="showScreen('upload',this)">
-      <span class="nav-icon">⬆️</span>
-      <span class="nav-label">Upload</span>
-    </button>
-    <button class="nav-item" onclick="showScreen('plan',this)">
-      <span class="nav-icon">🎯</span>
-      <span class="nav-label">Plan</span>
-    </button>
-    <button class="nav-item" onclick="showScreen('stats',this)">
-      <span class="nav-icon">📊</span>
-      <span class="nav-label">Stats</span>
-    </button>
-    <button class="nav-item" onclick="showScreen('growth',this)">
-      <span class="nav-icon">📈</span>
-      <span class="nav-label">Growth</span>
-    </button>
-    <button class="nav-item" onclick="showScreen('settings',this)">
-      <span class="nav-icon">⚙️</span>
-      <span class="nav-label">Settings</span>
-    </button>
-    <button class="nav-item" onclick="showScreen('analytics',this)">
-      <span class="nav-icon">🔬</span>
-      <span class="nav-label">Analysis</span>
-    </button>
-    <button class="nav-item" onclick="showScreen('highlights',this)">
-      <span class="nav-icon">📌</span>
-      <span class="nav-label">Highlights</span>
-    </button>
-
-    <!-- Market switcher - visible on desktop sidebar -->
-    <div id="nav-market-switcher" style="display:none;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-top:1px solid var(--border);">
-    </div>
-
-    <!-- Auth button - visible on desktop sidebar -->
-    <div id="nav-auth-btn" style="display:none;flex-direction:column;align-items:center;padding:10px 4px;border-top:1px solid var(--border);">
-      <button id="auth-btn-nav" onclick="currentUser ? signOut() : showAuthModal()"
-        style="background:var(--gold-dim);border:1px solid rgba(245,200,66,0.3);border-radius:10px;color:var(--gold);font-size:9px;font-weight:700;cursor:pointer;font-family:var(--font);padding:8px 6px;width:64px;text-align:center;letter-spacing:0.3px;">
-        Sign In
-      </button>
-      <div id="nav-sync-dot" style="width:6px;height:6px;border-radius:50%;background:var(--text3);margin-top:6px;" title="Not synced"></div>
-    </div>
-  </nav>
 
 
   <!-- TOP BAR (mobile/tablet only) -->
@@ -723,6 +665,56 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
     </div>
 
   </div><!-- /content -->
+
+      <!-- BOTTOM NAV -->
+  <nav id="bottomnav">
+    <button class="nav-item active" onclick="showScreen('journal',this)">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">Journal</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('upload',this)">
+      <span class="nav-icon">⬆️</span>
+      <span class="nav-label">Upload</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('plan',this)">
+      <span class="nav-icon">🎯</span>
+      <span class="nav-label">Plan</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('stats',this)">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Stats</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('growth',this)">
+      <span class="nav-icon">📈</span>
+      <span class="nav-label">Growth</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('settings',this)">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Settings</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('analytics',this)">
+      <span class="nav-icon">🔬</span>
+      <span class="nav-label">Analysis</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('highlights',this)">
+      <span class="nav-icon">📌</span>
+      <span class="nav-label">Highlights</span>
+    </button>
+
+    <!-- Market switcher - visible on desktop sidebar -->
+    <div id="nav-market-switcher" style="display:none;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-top:1px solid var(--border);">
+    </div>
+
+    <!-- Auth button - visible on desktop sidebar -->
+    <div id="nav-auth-btn" style="display:none;flex-direction:column;align-items:center;padding:10px 4px;border-top:1px solid var(--border);">
+      <button id="auth-btn-nav" onclick="currentUser ? signOut() : showAuthModal()"
+        style="background:var(--gold-dim);border:1px solid rgba(245,200,66,0.3);border-radius:10px;color:var(--gold);font-size:9px;font-weight:700;cursor:pointer;font-family:var(--font);padding:8px 6px;width:64px;text-align:center;letter-spacing:0.3px;">
+        Sign In
+      </button>
+      <div id="nav-sync-dot" style="width:6px;height:6px;border-radius:50%;background:var(--text3);margin-top:6px;" title="Not synced"></div>
+    </div>
+  </nav>
+
 
 
 </div><!-- /app -->
