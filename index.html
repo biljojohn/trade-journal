@@ -893,9 +893,18 @@ async function syncToCloud(){
   if(!fb) return;
   try{
     const {doc, setDoc} = window._fbModules;
+    let savedSettings = {};
+    try { savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'); } catch(e){}
+    const settingsPayload = {
+      initialCapital: INITIAL_CAPITAL,
+      target: TARGET,
+      userName: USER_NAME,
+      updatedAt: savedSettings.updatedAt || new Date().toISOString()
+    };
     await setDoc(doc(fb.db,'journals',currentUser.uid),{
       journal:  JSON.stringify(journal),
-      settings: JSON.stringify({initialCapital:INITIAL_CAPITAL,target:TARGET,userName:USER_NAME}),
+      settings: JSON.stringify(settingsPayload),
+      settingsUpdatedAt: settingsPayload.updatedAt,
       updatedAt: new Date().toISOString()
     });
     showToast('☁️ Saved to cloud');
@@ -924,11 +933,32 @@ async function syncFromCloud(){
       }
     }
     if(data.settings){
-      const s = JSON.parse(data.settings);
-      if(s.initialCapital) INITIAL_CAPITAL = s.initialCapital;
-      if(s.target)         TARGET           = s.target;
-      if(s.userName)       USER_NAME        = s.userName;
-      try{ localStorage.setItem(SETTINGS_KEY, data.settings); }catch(e){}
+      const cloudSettings = JSON.parse(data.settings);
+      let localSettings = {};
+      try { localSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'); } catch(e){}
+      const localHasSettings = !!(localSettings.initialCapital || localSettings.target || localSettings.userName);
+      const cloudTime = Date.parse(cloudSettings.updatedAt || data.settingsUpdatedAt || data.updatedAt || 0) || 0;
+      const localTime = Date.parse(localSettings.updatedAt || 0) || 0;
+
+      // Do not let an old cloud copy reset newer local capital/target after refresh.
+      // Older app versions had no settings timestamp, so only use untimed cloud settings
+      // when this browser has no saved settings yet.
+      const shouldUseCloudSettings = !localHasSettings || cloudTime >= localTime;
+
+      if(shouldUseCloudSettings){
+        if(cloudSettings.initialCapital) INITIAL_CAPITAL = Number(cloudSettings.initialCapital);
+        if(cloudSettings.target)         TARGET           = Number(cloudSettings.target);
+        if(cloudSettings.userName !== undefined) USER_NAME = cloudSettings.userName || 'Trader';
+        try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+          initialCapital: INITIAL_CAPITAL,
+          target: TARGET,
+          userName: USER_NAME,
+          updatedAt: cloudSettings.updatedAt || data.settingsUpdatedAt || data.updatedAt || new Date().toISOString()
+        })); }catch(e){}
+      } else {
+        // Local settings are newer, push them back up so future refreshes/devices stay correct.
+        syncToCloud();
+      }
     }
     const days = Object.keys(journal).length;
     renderTopStats(); renderCalendar(); renderRecent();
@@ -1000,14 +1030,28 @@ function loadSettings(){
 }
 
 function saveSettings(ic, tgt, name){
-  INITIAL_CAPITAL = ic;
-  TARGET          = tgt;
+  INITIAL_CAPITAL = Number(ic);
+  TARGET          = Number(tgt);
   USER_NAME       = name || '';
-  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({initialCapital:ic, target:tgt, userName:USER_NAME})); } catch(e){}
+  const settingsPayload = {
+    initialCapital: INITIAL_CAPITAL,
+    target: TARGET,
+    userName: USER_NAME,
+    updatedAt: new Date().toISOString()
+  };
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settingsPayload));
+  } catch(e){}
+
+  // Important: settings were previously saved only locally.
+  // When signed in, a page refresh could pull older cloud settings and reset capital/target.
+  if(currentUser) syncToCloud();
+
   // Refresh everything
   renderTopStats();
   renderCalendar();
-  document.getElementById('top-sub').textContent = USER_NAME ? USER_NAME + ' · All Brokers' : 'Universal · All Brokers Supported';
+  const sub = document.getElementById('top-sub');
+  if(sub) sub.textContent = USER_NAME ? USER_NAME + ' · All Brokers' : 'Universal · All Brokers Supported';
 }
 
 function isFirstLaunch(){
