@@ -192,7 +192,7 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
   #topbar-market-switcher{display:none !important;}
   #sync-status{display:none !important;}
   #nav-auth-btn{display:flex !important;}
-  #nav-market-switcher{display:none !important;}
+  #nav-market-switcher{display:flex !important;}
 }
 </style>
 </head>
@@ -567,14 +567,14 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
 
           <!-- Starting Capital -->
           <div style="margin-bottom:16px;">
-            <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;">Starting Capital</div>
+            <div id="set-cap-label" style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;">Starting Capital</div>
             <div style="position:relative;">
-              <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;font-weight:600;">₹</span>
+              <span id="set-cap-symbol" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;font-weight:600;">₹</span>
               <input id="set-capital" type="number" min="1000"
                 style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:12px 14px 12px 28px;font-size:16px;color:var(--text);font-family:var(--mono);outline:none;"
                 onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"/>
             </div>
-            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+            <div id="set-cap-quick" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
               <button onclick="document.getElementById('set-capital').value='100000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹1L</button>
               <button onclick="document.getElementById('set-capital').value='200000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹2L</button>
               <button onclick="document.getElementById('set-capital').value='500000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹5L</button>
@@ -586,14 +586,14 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
 
           <!-- Target -->
           <div style="margin-bottom:16px;">
-            <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;">Target Amount</div>
+            <div id="set-target-label" style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;">Target Amount</div>
             <div style="position:relative;">
-              <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;font-weight:600;">₹</span>
+              <span id="set-target-symbol" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;font-weight:600;">₹</span>
               <input id="set-target" type="number" min="1000"
                 style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:12px 14px 12px 28px;font-size:16px;color:var(--text);font-family:var(--mono);outline:none;"
                 onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"/>
             </div>
-            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+            <div id="set-target-quick" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
               <button onclick="document.getElementById('set-target').value='1000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹10L</button>
               <button onclick="document.getElementById('set-target').value='2500000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹25L</button>
               <button onclick="document.getElementById('set-target').value='5000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹50L</button>
@@ -893,21 +893,29 @@ async function syncToCloud(){
   if(!fb) return;
   try{
     const {doc, setDoc} = window._fbModules;
-    let savedSettings = {};
-    try { savedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'); } catch(e){}
-    const settingsPayload = {
-      initialCapital: INITIAL_CAPITAL,
-      target: TARGET,
-      userName: USER_NAME,
-      updatedAt: savedSettings.updatedAt || new Date().toISOString()
+    const allJournals = {
+      indian: JSON.parse(localStorage.getItem(STORAGE_KEY+'-indian') || '{}'),
+      usd: JSON.parse(localStorage.getItem(STORAGE_KEY+'-usd') || '{}')
+    };
+    const allSettings = {
+      indian: JSON.parse(localStorage.getItem(SETTINGS_KEY+'-indian') || '{}'),
+      usd: JSON.parse(localStorage.getItem(SETTINGS_KEY+'-usd') || '{}')
+    };
+    allJournals[activeMarketKey()] = journal || {};
+    allSettings[activeMarketKey()] = {
+      market: activeMarketKey(), currency: MARKET_CONFIG[activeMarketKey()].code,
+      initialCapital: INITIAL_CAPITAL, target: TARGET, userName: USER_NAME,
+      updatedAt: (allSettings[activeMarketKey()] && allSettings[activeMarketKey()].updatedAt) || new Date().toISOString()
     };
     await setDoc(doc(fb.db,'journals',currentUser.uid),{
-      journal:  JSON.stringify(journal),
-      settings: JSON.stringify(settingsPayload),
-      settingsUpdatedAt: settingsPayload.updatedAt,
+      marketMode: MARKET_MODE,
+      journalsByMarket: JSON.stringify(allJournals),
+      settingsByMarket: JSON.stringify(allSettings),
+      journal: JSON.stringify(allJournals.indian || {}),
+      settings: JSON.stringify(allSettings.indian || {}),
       updatedAt: new Date().toISOString()
     });
-    showToast('☁️ Saved to cloud');
+    showToast('☁️ Saved '+MARKET_CONFIG[activeMarketKey()].code+' workspace to cloud');
   }catch(e){ console.warn('Sync failed',e.message); }
 }
 
@@ -920,56 +928,51 @@ async function syncFromCloud(){
     const {doc, getDoc} = window._fbModules;
     const snap = await getDoc(doc(fb.db,'journals',currentUser.uid));
     if(!snap.exists()){
-      showToast('No cloud data yet — upload your CSV!');
+      showToast('No cloud data yet — local workspaces ready');
       return;
     }
     const data = snap.data();
-    if(data.journal){
-      const cloud = JSON.parse(data.journal);
-      const days = Object.keys(cloud).length;
-      if(days>0){
-        journal = cloud;
-        try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(journal)); }catch(e){}
-      }
-    }
-    if(data.settings){
-      const cloudSettings = JSON.parse(data.settings);
-      let localSettings = {};
-      try { localSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'); } catch(e){}
-      const localHasSettings = !!(localSettings.initialCapital || localSettings.target || localSettings.userName);
-      const cloudTime = Date.parse(cloudSettings.updatedAt || data.settingsUpdatedAt || data.updatedAt || 0) || 0;
-      const localTime = Date.parse(localSettings.updatedAt || 0) || 0;
+    let cloudJournals = {}, cloudSettings = {};
+    try{ if(data.journalsByMarket) cloudJournals = JSON.parse(data.journalsByMarket); }catch(e){}
+    try{ if(data.settingsByMarket) cloudSettings = JSON.parse(data.settingsByMarket); }catch(e){}
+    if(!cloudJournals.indian && data.journal){ try{ cloudJournals.indian = JSON.parse(data.journal); }catch(e){} }
+    if(!cloudSettings.indian && data.settings){ try{ cloudSettings.indian = JSON.parse(data.settings); }catch(e){} }
+    if(!cloudJournals.usd) cloudJournals.usd = JSON.parse(localStorage.getItem(STORAGE_KEY+'-usd') || '{}');
+    if(!cloudSettings.usd) cloudSettings.usd = JSON.parse(localStorage.getItem(SETTINGS_KEY+'-usd') || '{}');
 
-      // Do not let an old cloud copy reset newer local capital/target after refresh.
-      // Older app versions had no settings timestamp, so only use untimed cloud settings
-      // when this browser has no saved settings yet.
-      const shouldUseCloudSettings = !localHasSettings || cloudTime >= localTime;
+    ['indian','usd'].forEach(key=>{
+      try{
+        const localJournal = JSON.parse(localStorage.getItem(STORAGE_KEY+'-'+key) || '{}');
+        const cloudJournal = cloudJournals[key] || {};
+        const chosenJournal = Object.keys(cloudJournal).length ? cloudJournal : localJournal;
+        localStorage.setItem(STORAGE_KEY+'-'+key, JSON.stringify(chosenJournal));
 
-      if(shouldUseCloudSettings){
-        if(cloudSettings.initialCapital) INITIAL_CAPITAL = Number(cloudSettings.initialCapital);
-        if(cloudSettings.target)         TARGET           = Number(cloudSettings.target);
-        if(cloudSettings.userName !== undefined) USER_NAME = cloudSettings.userName || 'Trader';
-        try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-          initialCapital: INITIAL_CAPITAL,
-          target: TARGET,
-          userName: USER_NAME,
-          updatedAt: cloudSettings.updatedAt || data.settingsUpdatedAt || data.updatedAt || new Date().toISOString()
-        })); }catch(e){}
-      } else {
-        // Local settings are newer, push them back up so future refreshes/devices stay correct.
-        syncToCloud();
-      }
-    }
+        const localSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY+'-'+key) || '{}');
+        const cSet = cloudSettings[key] || {};
+        const localTime = Date.parse(localSettings.updatedAt || 0) || 0;
+        const cloudTime = Date.parse(cSet.updatedAt || data.updatedAt || 0) || 0;
+        const chosenSettings = (!localSettings.initialCapital || cloudTime >= localTime) ? cSet : localSettings;
+        if(chosenSettings && (chosenSettings.initialCapital || chosenSettings.target)){
+          localStorage.setItem(SETTINGS_KEY+'-'+key, JSON.stringify(chosenSettings));
+        }
+      }catch(e){}
+    });
+
+    loadSettings(); loadJournal();
     const days = Object.keys(journal).length;
-    renderTopStats(); renderCalendar(); renderRecent();
-    showToast('✅ Loaded '+days+' trading days!', 3000);
+    renderTopStats(); renderCalendar(); renderRecent(); renderMarketSwitcher();
+    showToast('✅ Loaded '+MARKET_CONFIG[activeMarketKey()].code+' workspace: '+days+' trading days', 3000);
   }catch(e){ console.warn('Cloud fetch failed',e); showToast('❌ Sync failed: '+e.message); }
 }
 
 function saveJournal(){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(journal)); }catch(e){}
+  try{
+    localStorage.setItem(marketJournalKey(), JSON.stringify(journal));
+    if(activeMarketKey()==='indian') localStorage.setItem(STORAGE_KEY, JSON.stringify(journal));
+  }catch(e){}
   if(currentUser) syncToCloud();
 }
+
 
 function showToast(msg,dur=2500){
   let t=document.getElementById('toast');
@@ -1021,10 +1024,14 @@ let TARGET          = 10000000;
 let USER_NAME       = 'Trader';
 
 function loadSettings(){
+  const cfg = MARKET_CONFIG[activeMarketKey()];
+  INITIAL_CAPITAL = cfg.capitalDefault;
+  TARGET = cfg.planTargetDefault;
   try {
-    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}');
-    if(s.initialCapital && s.initialCapital > 0) INITIAL_CAPITAL = s.initialCapital;
-    if(s.target && s.target > 0) TARGET = s.target;
+    migrateLegacyLocalData();
+    const s = JSON.parse(localStorage.getItem(marketSettingsKey())||'{}');
+    if(s.initialCapital && Number(s.initialCapital) > 0) INITIAL_CAPITAL = Number(s.initialCapital);
+    if(s.target && Number(s.target) > 0) TARGET = Number(s.target);
     if(s.userName !== undefined) USER_NAME = s.userName || 'Trader';
   } catch(e){}
 }
@@ -1034,29 +1041,31 @@ function saveSettings(ic, tgt, name){
   TARGET          = Number(tgt);
   USER_NAME       = name || '';
   const settingsPayload = {
+    market: activeMarketKey(),
+    currency: MARKET_CONFIG[activeMarketKey()].code,
     initialCapital: INITIAL_CAPITAL,
     target: TARGET,
     userName: USER_NAME,
     updatedAt: new Date().toISOString()
   };
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settingsPayload));
+    localStorage.setItem(marketSettingsKey(), JSON.stringify(settingsPayload));
+    if(activeMarketKey()==='indian') localStorage.setItem(SETTINGS_KEY, JSON.stringify(settingsPayload));
   } catch(e){}
 
-  // Important: settings were previously saved only locally.
-  // When signed in, a page refresh could pull older cloud settings and reset capital/target.
   if(currentUser) syncToCloud();
 
-  // Refresh everything
   renderTopStats();
   renderCalendar();
+  renderMarketSwitcher();
   const sub = document.getElementById('top-sub');
-  if(sub) sub.textContent = USER_NAME ? USER_NAME + ' · All Brokers' : 'Universal · All Brokers Supported';
+  if(sub) sub.textContent = (USER_NAME || 'Trader') + ' · ' + MARKET_CONFIG[activeMarketKey()].name + ' · ' + MARKET_CONFIG[activeMarketKey()].code;
 }
 
 function isFirstLaunch(){
-  return !localStorage.getItem(SETTINGS_KEY);
+  return !localStorage.getItem(marketSettingsKey());
 }
+
 
 // -- Net P&L helper — always deducts brokerage --
 const netOf = (d) => (d.pnl||0) - (d.brokerage||0);
@@ -1109,7 +1118,7 @@ function calcTotalWithdrawn(){
 }
 
 // -- Persist --
-function loadJournal() { try { const d=localStorage.getItem(STORAGE_KEY); if(d) journal=JSON.parse(d); } catch(e){} }
+function loadJournal() { try { migrateLegacyLocalData(); const d=localStorage.getItem(marketJournalKey()); journal = d ? JSON.parse(d) : {}; } catch(e){ journal = {}; } }
 
 // ======================================================
 //  NAV
@@ -1621,17 +1630,16 @@ function fmtPnl(n,short=false){
 }
 function fmtInr(n){ const sym=CURR_SYMBOL||'₹'; return sym+Math.abs(Math.round(n)).toLocaleString('en-IN'); }
 function fmtL(n){
-  const sym = CURR_SYMBOL||'₹';
+  n = Math.abs(Number(n)||0);
   if(MARKET_MODE === 'indian'){
     if(n>=10000000)return(n/10000000).toFixed(2)+' Cr';
     if(n>=100000)return(n/100000).toFixed(2)+'L';
     if(n>=1000)return(n/1000).toFixed(1)+'K';
-    return sym+Math.round(n).toLocaleString('en-IN');
+    return Math.round(n).toLocaleString('en-IN');
   } else {
-    // USD formatting
-    if(n>=1000000)return sym+(n/1000000).toFixed(2)+'M';
-    if(n>=1000)return sym+(n/1000).toFixed(1)+'K';
-    return sym+Math.round(n).toLocaleString('en-US');
+    if(n>=1000000)return(n/1000000).toFixed(2)+'M';
+    if(n>=1000)return(n/1000).toFixed(1)+'K';
+    return Math.round(n).toLocaleString('en-US');
   }
 }
 function shortSym(s){return s.replace(/26[A-Z]{3}/g,'').replace(/([A-Z]+)(\d+)(CE|PE)/,'$1 $2$3');}
@@ -1719,21 +1727,28 @@ function saveBrokerage(date) {
 // -- Chart & Notes helpers --
 function saveCharts(date) {
   if(!journal[date]) return;
+  const old = journal[date].charts || {};
   journal[date].charts = {
-    nifty:      (document.getElementById('chart-nifty')       ||{}).value?.trim() || journal[date].charts?.nifty      || '',
-    niftyCe:    (document.getElementById('chart-nifty-ce')    ||{}).value?.trim() || journal[date].charts?.niftyCe    || '',
-    niftyPe:    (document.getElementById('chart-nifty-pe')    ||{}).value?.trim() || journal[date].charts?.niftyPe    || '',
-    sensex:     (document.getElementById('chart-sensex')      ||{}).value?.trim() || journal[date].charts?.sensex     || '',
-    sensexCe:   (document.getElementById('chart-sensex-ce')   ||{}).value?.trim() || journal[date].charts?.sensexCe   || '',
-    sensexPe:   (document.getElementById('chart-sensex-pe')   ||{}).value?.trim() || journal[date].charts?.sensexPe   || '',
-    banknifty:  (document.getElementById('chart-banknifty')   ||{}).value?.trim() || journal[date].charts?.banknifty  || '',
-    giftNifty:  (document.getElementById('chart-giftnifty')   ||{}).value?.trim() || journal[date].charts?.giftNifty  || '',
+    nifty:      (document.getElementById('chart-nifty')       ||{}).value?.trim() || old.nifty      || '',
+    niftyCe:    (document.getElementById('chart-nifty-ce')    ||{}).value?.trim() || old.niftyCe    || '',
+    niftyPe:    (document.getElementById('chart-nifty-pe')    ||{}).value?.trim() || old.niftyPe    || '',
+    sensex:     (document.getElementById('chart-sensex')      ||{}).value?.trim() || old.sensex     || '',
+    sensexCe:   (document.getElementById('chart-sensex-ce')   ||{}).value?.trim() || old.sensexCe   || '',
+    sensexPe:   (document.getElementById('chart-sensex-pe')   ||{}).value?.trim() || old.sensexPe   || '',
+    banknifty:  (document.getElementById('chart-banknifty')   ||{}).value?.trim() || old.banknifty  || '',
+    giftNifty:  (document.getElementById('chart-giftnifty')   ||{}).value?.trim() || old.giftNifty  || '',
+    btc:        (document.getElementById('chart-btc')         ||{}).value?.trim() || old.btc        || '',
+    gold:       (document.getElementById('chart-gold')        ||{}).value?.trim() || old.gold       || '',
+    eurusd:     (document.getElementById('chart-eurusd')      ||{}).value?.trim() || old.eurusd     || '',
+    gbpusd:     (document.getElementById('chart-gbpusd')      ||{}).value?.trim() || old.gbpusd     || '',
+    nas100:     (document.getElementById('chart-nas100')      ||{}).value?.trim() || old.nas100     || '',
+    us30:       (document.getElementById('chart-us30')        ||{}).value?.trim() || old.us30       || '',
+    eth:        (document.getElementById('chart-eth')         ||{}).value?.trim() || old.eth        || '',
+    custom:     (document.getElementById('chart-custom')      ||{}).value?.trim() || old.custom     || '',
   };
-  saveJournal();
-  const btn = document.getElementById('note-save-btn');
-  showToast('📊 Charts saved!');
-  renderDayDetail();
+  saveJournal(); showToast('📊 Charts saved!'); renderDayDetail();
 }
+
 
 function toggleSpecialDay(date){
   if(!journal[date]) return;
@@ -1950,6 +1965,18 @@ function renderDayDetail(){
           <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;margin-top:12px;">OTHERS</div>
           ${chartRow('chart-banknifty',    'BANKNIFTY',    '🟡', '#F5C842', charts.banknifty    ||'', selectedDate)}
           ${chartRow('chart-giftnifty',    'GIFT NIFTY',   '🟠', '#f97316', charts.giftNifty    ||'', selectedDate)}
+
+          ${MARKET_MODE==='usd' ? `
+            <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;margin-top:12px;">USD MARKET CHARTS</div>
+            ${chartRow('chart-btc',     'BTC',          '🟠', '#f97316', charts.btc     ||'', selectedDate)}
+            ${chartRow('chart-gold',    'GOLD / XAUUSD','🟡', '#F5C842', charts.gold    ||'', selectedDate)}
+            ${chartRow('chart-eurusd',  'EURUSD',       '🔵', '#60a5fa', charts.eurusd  ||'', selectedDate)}
+            ${chartRow('chart-gbpusd',  'GBPUSD',       '🟣', '#c084fc', charts.gbpusd  ||'', selectedDate)}
+            ${chartRow('chart-nas100',  'NAS100',       '🟢', '#22C55E', charts.nas100  ||'', selectedDate)}
+            ${chartRow('chart-us30',    'US30',         '🔴', '#f87171', charts.us30    ||'', selectedDate)}
+            ${chartRow('chart-eth',     'ETH',          '⚪', '#A8A4B8', charts.eth     ||'', selectedDate)}
+            ${chartRow('chart-custom',  'Custom Chart', '📊', '#3B82F6', charts.custom  ||'', selectedDate)}
+          ` : ''}
 
           <button onclick="saveCharts('${selectedDate}')"
             style="width:100%;margin-top:10px;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);">
@@ -2248,105 +2275,124 @@ function acceptPolished(date){
 }
 
 // ======================================================
-//  MULTI-MARKET MODE
-//  indian | forex | crypto | commodities
+//  MARKET WORKSPACES: INR / USD
+//  Each workspace has its own journal + settings.
 // ======================================================
-let MARKET_MODE = 'indian';
+let MARKET_MODE = 'indian'; // indian = INR, usd = USD
 
-// Currency symbols & labels per market
 const MARKET_CONFIG = {
   indian: {
-    sym: '₹', name: 'Indian Market', flag: '🇮🇳',
+    sym: '₹', code: 'INR', name: 'INR Market', flag: '🇮🇳',
     instruments: ['NIFTY','BANKNIFTY','SENSEX','FINNIFTY','MIDCAP'],
-    chartLabels: {nifty:'NIFTY Index',niftyCe:'NIFTY CE',niftyPe:'NIFTY PE',sensex:'SENSEX Index',sensexCe:'SENSEX CE',sensexPe:'SENSEX PE',banknifty:'BANKNIFTY',giftNifty:'GIFT NIFTY'},
-    uploadHint: 'Fyers, Zerodha, Upstox, Angel, Groww, ICICI etc.',
+    uploadHint: 'Indian broker CSV + manual entries',
     planTargetDefault: 10000000, capitalDefault: 500000,
-    color: '#f97316'
+    color: '#F5C842'
+  },
+  usd: {
+    sym: '$', code: 'USD', name: 'USD Market', flag: '🌍',
+    instruments: ['BTC','GOLD','XAUUSD','EURUSD','GBPUSD','NAS100','US30','ETH'],
+    uploadHint: 'Manual P&L + TradingView chart URLs for crypto/forex',
+    planTargetDefault: 100000, capitalDefault: 10000,
+    color: '#3B82F6'
   }
-}
+};
 
-// Dynamic currency symbol — always reads from current mode
 let CURR_SYMBOL = '₹';
 
-function renderMarketSwitcher(){ var sw=document.getElementById("nav-market-switcher"); if(sw)sw.style.display="none"; return;
-  var modes = [
-    {key:'indian',     cfg:MARKET_CONFIG.indian},
-    {key:'forex',      cfg:MARKET_CONFIG.forex},
-    {key:'crypto',     cfg:MARKET_CONFIG.crypto},
-    {key:'commodities',cfg:MARKET_CONFIG.commodities}
+function activeMarketKey(){ return MARKET_MODE === 'usd' ? 'usd' : 'indian'; }
+function marketJournalKey(){ return STORAGE_KEY + '-' + activeMarketKey(); }
+function marketSettingsKey(){ return SETTINGS_KEY + '-' + activeMarketKey(); }
+
+function migrateLegacyLocalData(){
+  try{
+    const migrated = localStorage.getItem('market-workspace-migrated-v1');
+    if(migrated) return;
+    const oldJournal = localStorage.getItem(STORAGE_KEY);
+    const oldSettings = localStorage.getItem(SETTINGS_KEY);
+    if(oldJournal && !localStorage.getItem(STORAGE_KEY+'-indian')) localStorage.setItem(STORAGE_KEY+'-indian', oldJournal);
+    if(oldSettings && !localStorage.getItem(SETTINGS_KEY+'-indian')) localStorage.setItem(SETTINGS_KEY+'-indian', oldSettings);
+    if(!localStorage.getItem(SETTINGS_KEY+'-usd')){
+      localStorage.setItem(SETTINGS_KEY+'-usd', JSON.stringify({
+        initialCapital: MARKET_CONFIG.usd.capitalDefault,
+        target: MARKET_CONFIG.usd.planTargetDefault,
+        userName: USER_NAME || 'Trader',
+        updatedAt: new Date().toISOString()
+      }));
+    }
+    if(!localStorage.getItem(STORAGE_KEY+'-usd')) localStorage.setItem(STORAGE_KEY+'-usd', '{}');
+    localStorage.setItem('market-workspace-migrated-v1','yes');
+  }catch(e){ console.warn('migration failed', e); }
+}
+
+function renderMarketSwitcher(){
+  const modes = [
+    {key:'indian', cfg:MARKET_CONFIG.indian, label:'₹ INR'},
+    {key:'usd', cfg:MARKET_CONFIG.usd, label:'$ USD'}
   ];
 
-  // Top bar (mobile/tablet)
-  var sw = document.getElementById('topbar-market-switcher');
+  const sw = document.getElementById('topbar-market-switcher');
   if(sw){
-    var html = '';
-    modes.forEach(function(m){
-      var isActive = MARKET_MODE === m.key;
-      html += '<button onclick="setMarketMode(\'' + m.key + '\')" ';
-      html += 'style="flex-shrink:0;padding:6px 12px;border-radius:20px;';
-      html += 'border:1.5px solid ' + (isActive ? m.cfg.color : 'var(--border2)') + ';';
-      html += 'background:' + (isActive ? 'rgba(99,99,99,0.18)' : 'var(--card)') + ';';
-      html += 'cursor:pointer;font-family:var(--font);font-size:11px;font-weight:700;';
-      html += 'color:' + (isActive ? m.cfg.color : 'var(--text3)') + ';';
-      html += 'transition:all .15s;-webkit-tap-highlight-color:transparent;white-space:nowrap;">';
-      html += m.cfg.flag + ' ' + m.cfg.name + (isActive ? ' (' + m.cfg.sym + ')' : '');
-      html += '</button>';
-    });
-    sw.innerHTML = html;
+    sw.style.display = 'flex';
+    sw.innerHTML = modes.map(m=>{
+      const isActive = MARKET_MODE === m.key;
+      return `<button onclick="setMarketMode('${m.key}')"
+        style="flex:1;min-width:120px;padding:8px 12px;border-radius:20px;border:1.5px solid ${isActive?m.cfg.color:'var(--border2)'};background:${isActive?'rgba(245,200,66,0.10)':'var(--card)'};cursor:pointer;font-family:var(--font);font-size:12px;font-weight:800;color:${isActive?m.cfg.color:'var(--text3)'};transition:all .15s;-webkit-tap-highlight-color:transparent;white-space:nowrap;">
+        ${m.cfg.flag} ${m.label}${isActive?' ACTIVE':''}
+      </button>`;
+    }).join('');
   }
 
-  // Sidebar nav (desktop)
-  var nav = document.getElementById('nav-market-switcher');
+  const nav = document.getElementById('nav-market-switcher');
   if(nav){
-    var navHtml = '<div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;text-align:center;">Market</div>';
-    modes.forEach(function(m){
-      var isActive = MARKET_MODE === m.key;
-      navHtml += '<button onclick="setMarketMode(\'' + m.key + '\')" title="' + m.cfg.name + '" ';
-      navHtml += 'style="width:64px;padding:5px 2px;border-radius:8px;';
-      navHtml += 'border:1.5px solid ' + (isActive ? m.cfg.color : 'var(--border2)') + ';';
-      navHtml += 'background:' + (isActive ? 'rgba(99,99,99,0.18)' : 'transparent') + ';';
-      navHtml += 'cursor:pointer;font-size:10px;font-weight:700;';
-      navHtml += 'color:' + (isActive ? m.cfg.color : 'var(--text3)') + ';';
-      navHtml += 'transition:all .15s;-webkit-tap-highlight-color:transparent;text-align:center;display:block;margin-bottom:3px;">';
-      navHtml += '<div style="font-size:15px;line-height:1.3;">' + m.cfg.flag + '</div>';
-      navHtml += '<div style="font-size:8px;">' + m.cfg.sym + '</div>';
-      navHtml += '</button>';
-    });
-    nav.innerHTML = navHtml;
+    nav.style.display = 'flex';
+    nav.innerHTML = '<div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;text-align:center;">Market</div>' +
+      modes.map(m=>{
+        const isActive = MARKET_MODE === m.key;
+        return `<button onclick="setMarketMode('${m.key}')" title="${m.cfg.name}"
+          style="width:68px;padding:7px 2px;border-radius:9px;border:1.5px solid ${isActive?m.cfg.color:'var(--border2)'};background:${isActive?'rgba(59,130,246,0.13)':'transparent'};cursor:pointer;font-size:10px;font-weight:800;color:${isActive?m.cfg.color:'var(--text3)'};transition:all .15s;-webkit-tap-highlight-color:transparent;text-align:center;display:block;margin-bottom:5px;">
+          <div style="font-size:13px;line-height:1.2;">${m.cfg.flag}</div>
+          <div>${m.label}</div>
+        </button>`;
+      }).join('');
   }
 }
 
 function setMarketMode(mode){
+  if(!MARKET_CONFIG[mode]) mode = 'indian';
   MARKET_MODE = mode;
   CURR_SYMBOL = MARKET_CONFIG[mode].sym;
-  // Save mode only — never auto-change capital
+  updateCurrencyUI();
   try{ localStorage.setItem('market_mode', mode); }catch(e){}
 
-  // Load this market's own separate journal and settings
-  loadJournal();
   loadSettings();
+  loadJournal();
   selectedDate = null;
 
   const cfg = MARKET_CONFIG[mode];
-  showToast(cfg.flag+' Switched to '+cfg.name+' · '+cfg.sym+(mode==='indian'?' INR':' USD'));
+  showToast(cfg.flag+' Switched to '+cfg.name+' · '+cfg.code);
 
-  // Update topbar
   const subEl = document.getElementById('top-sub');
-  if(subEl) subEl.textContent = (USER_NAME||'Trader')+' · '+(mode==='indian'?'Indian Market':'USD Market');
+  if(subEl) subEl.textContent = (USER_NAME||'Trader')+' · '+cfg.name+' · '+cfg.code;
   renderMarketSwitcher();
 
-  renderTopStats(); renderCalendar();
-  if(document.getElementById('screen-plan').classList.contains('active')) renderPlan();
-  if(document.getElementById('screen-stats').classList.contains('active')) renderStats();
-  if(document.getElementById('screen-growth').classList.contains('active')) renderGrowth();
-  if(document.getElementById('screen-settings').classList.contains('active')) renderSettingsScreen();
+  renderTopStats(); renderCalendar(); renderRecent();
+  if(typeof renderManualChargesForm==='function') renderManualChargesForm();
+  if(typeof renderManualEntryRecent==='function') renderManualEntryRecent();
+  if(document.getElementById('screen-plan')?.classList.contains('active')) renderPlan();
+  if(document.getElementById('screen-stats')?.classList.contains('active')) renderStats();
+  if(document.getElementById('screen-growth')?.classList.contains('active')) renderGrowth();
+  if(document.getElementById('screen-analytics')?.classList.contains('active')) renderAnalytics();
+  if(document.getElementById('screen-highlights')?.classList.contains('active')) renderHighlights();
+  if(document.getElementById('screen-settings')?.classList.contains('active')) renderSettingsScreen();
 }
 
 function loadMarketMode(){
   try{
+    migrateLegacyLocalData();
     const saved = localStorage.getItem('market_mode');
-    if(saved && MARKET_CONFIG[saved]){ MARKET_MODE=saved; CURR_SYMBOL=MARKET_CONFIG[saved].sym; }
+    if(saved && MARKET_CONFIG[saved]) MARKET_MODE = saved;
   }catch(e){}
+  CURR_SYMBOL = MARKET_CONFIG[MARKET_MODE].sym;
 }
 
 
@@ -3232,9 +3278,9 @@ function renderPlanHero(){
   const targetEl = document.getElementById('plan-target-label');
   if(targetEl) targetEl.textContent = CURR_SYMBOL+fmtL(TARGET);
   const startLbl = document.getElementById('plan-start-label');
-  if(startLbl) startLbl.textContent = fmtL(INITIAL_CAPITAL)+' START';
+  if(startLbl) startLbl.textContent = CURR_SYMBOL+fmtL(INITIAL_CAPITAL)+' START';
   const goalLbl = document.getElementById('plan-goal-label');
-  if(goalLbl) goalLbl.textContent = fmtL(TARGET)+' GOAL';
+  if(goalLbl) goalLbl.textContent = CURR_SYMBOL+fmtL(TARGET)+' GOAL';
 
   // Actual capital from journal — only reinvested portion is in account
   const days=Object.values(journal);
@@ -4479,16 +4525,16 @@ function renderPrediction(){
 function showOnboarding(){
   const m = document.getElementById('onboard-modal');
   m.style.display = 'flex';
-  document.getElementById('ob-capital').value = '500000';
-  document.getElementById('ob-target').value  = '10000000';
+  document.getElementById('ob-capital').value = String(MARKET_CONFIG[activeMarketKey()].capitalDefault);
+  document.getElementById('ob-target').value  = String(MARKET_CONFIG[activeMarketKey()].planTargetDefault);
 }
 
 function submitOnboarding(){
   const name   = (document.getElementById('ob-name').value||'').trim();
   const capRaw = parseFloat(document.getElementById('ob-capital').value);
   const tgtRaw = parseFloat(document.getElementById('ob-target').value);
-  const cap    = capRaw > 0 ? capRaw : 500000;
-  const tgt    = tgtRaw > cap ? tgtRaw : cap * 20;
+  const cap    = capRaw > 0 ? capRaw : MARKET_CONFIG[activeMarketKey()].capitalDefault;
+  const tgt    = tgtRaw > cap ? tgtRaw : MARKET_CONFIG[activeMarketKey()].planTargetDefault;
   saveSettings(cap, tgt, name);
   document.getElementById('onboard-modal').style.display='none';
 }
@@ -4512,13 +4558,38 @@ function refreshSettingsAuth(){
   }
 }
 
-function renderSettingsScreen(){ var mk=document.getElementById("market-mode-section"); if(mk)mk.style.display="none";
+
+function updateCurrencyUI(){
+  const cfg = MARKET_CONFIG[MARKET_MODE] || MARKET_CONFIG.indian;
+  ['me-sym','me-brok-sym','set-cap-symbol','set-target-symbol'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.textContent = cfg.sym;
+  });
+  const capLabel=document.getElementById('set-cap-label');
+  const tgtLabel=document.getElementById('set-target-label');
+  if(capLabel) capLabel.textContent = `Starting Capital (${cfg.code})`;
+  if(tgtLabel) tgtLabel.textContent = `Target Amount (${cfg.code})`;
+
+  const capQuick=document.getElementById('set-cap-quick');
+  const tgtQuick=document.getElementById('set-target-quick');
+  const btnStyle="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);";
+  const capPicks = MARKET_MODE==='usd'
+    ? [['$1K','1000'],['$5K','5000'],['$10K','10000'],['$25K','25000'],['$50K','50000'],['$100K','100000']]
+    : [['₹1L','100000'],['₹2L','200000'],['₹5L','500000'],['₹10L','1000000'],['₹25L','2500000'],['₹50L','5000000']];
+  const tgtPicks = MARKET_MODE==='usd'
+    ? [['$10K','10000'],['$25K','25000'],['$50K','50000'],['$100K','100000'],['$250K','250000'],['$1M','1000000']]
+    : [['₹10L','1000000'],['₹25L','2500000'],['₹50L','5000000'],['₹1Cr','10000000'],['₹2Cr','20000000'],['₹5Cr','50000000']];
+  if(capQuick) capQuick.innerHTML = capPicks.map(([l,v])=>`<button onclick="document.getElementById('set-capital').value='${v}';renderSetPreview();" style="${btnStyle}">${l}</button>`).join('');
+  if(tgtQuick) tgtQuick.innerHTML = tgtPicks.map(([l,v])=>`<button onclick="document.getElementById('set-target').value='${v}';renderSetPreview();" style="${btnStyle}">${l}</button>`).join('');
+}
+
+function renderSettingsScreen(){ var mk=document.getElementById("market-mode-section"); if(mk)mk.style.display="block";
   const cn = document.getElementById('set-capital');
   const tn = document.getElementById('set-target');
   const nn = document.getElementById('set-name');
   if(cn) cn.value = INITIAL_CAPITAL;
   if(tn) tn.value = TARGET;
   if(nn) nn.value = USER_NAME;
+  updateCurrencyUI();
   renderSetPreview();
   ['set-capital','set-target'].forEach(id=>{
     const el=document.getElementById(id);
@@ -4531,19 +4602,19 @@ function renderSettingsScreen(){ var mk=document.getElementById("market-mode-sec
     mms.innerHTML = `
       <div class="card card-pad">
         <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">🌍 Market Mode</div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.6;">Switch between Indian market (₹), Forex, Crypto or Commodities ($). Each mode changes currency, instruments and chart labels.</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.6;">Switch between separate INR and USD workspaces. Each workspace has its own journal, capital, target, charges, notes, charts and analytics.</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           ${Object.entries(MARKET_CONFIG).map(([key,c])=>`
             <button onclick="setMarketMode('${key}')"
               style="padding:12px;border-radius:12px;border:1.5px solid ${MARKET_MODE===key?c.color:'var(--border2)'};background:${MARKET_MODE===key?'rgba(99,99,99,0.12)':'var(--card2)'};cursor:pointer;font-family:var(--font);text-align:left;transition:all .15s;-webkit-tap-highlight-color:transparent;">
               <div style="font-size:18px;margin-bottom:4px;">${c.flag}</div>
               <div style="font-size:12px;font-weight:700;color:${MARKET_MODE===key?c.color:'var(--text2)'};">${c.name}</div>
-              <div style="font-size:10px;color:var(--text3);margin-top:2px;">${c.sym} ${key==='indian'?'INR':'USD'}</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px;">${c.sym} ${c.code}</div>
               ${MARKET_MODE===key?`<div style="font-size:9px;color:${c.color};margin-top:4px;font-weight:700;">● ACTIVE</div>`:''}
             </button>`).join('')}
         </div>
         <div style="margin-top:12px;padding:10px 14px;background:var(--bg2);border-radius:10px;font-size:11px;color:var(--text3);line-height:1.6;">
-          💡 <b style="color:var(--text2);">Active:</b> ${cfg.flag} ${cfg.name} · Upload format: ${cfg.uploadHint}
+          💡 <b style="color:var(--text2);">Active:</b> ${cfg.flag} ${cfg.name} · ${cfg.code} · Upload: ${cfg.uploadHint}
         </div>
       </div>`;
   }
@@ -4826,7 +4897,7 @@ function initApp(){
 
   // Set topbar name & market switcher
   var subEl = document.getElementById('top-sub');
-  if(subEl) subEl.textContent = (USER_NAME||'Trader') + ' · ' + (MARKET_MODE==='indian'?'Indian Market':'USD Market');
+  if(subEl) subEl.textContent = (USER_NAME||'Trader') + ' · ' + MARKET_CONFIG[activeMarketKey()].name + ' · ' + MARKET_CONFIG[activeMarketKey()].code;
   renderMarketSwitcher();
 
   renderTopStats();
