@@ -115,6 +115,39 @@ body{font-family:var(--font);color:var(--text);background:var(--bg);-webkit-font
 /* iOS input zoom fix */
 input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--font);font-size:16px;}
 /* Responsive */
+/* MOBILE — force bottom nav at bottom of viewport */
+@media(max-width:767px){
+  #app{
+    display:-webkit-flex !important;
+    display:flex !important;
+    -webkit-flex-direction:column !important;
+    flex-direction:column !important;
+    height:100vh;
+    height:100dvh;
+    height:-webkit-fill-available;
+  }
+  #topbar{
+    -webkit-order:1 !important; order:1 !important;
+    -webkit-flex-shrink:0; flex-shrink:0;
+  }
+  #content{
+    -webkit-order:2 !important; order:2 !important;
+    -webkit-flex:1 !important; flex:1 !important;
+    overflow:hidden;
+    position:relative;
+    min-height:0;
+  }
+  #bottomnav{
+    -webkit-order:3 !important; order:3 !important;
+    -webkit-flex-shrink:0; flex-shrink:0;
+    position:sticky;
+    bottom:0;
+    z-index:50;
+  }
+  .screen{
+    padding-bottom:80px !important;
+  }
+}
 @media(min-width:768px){#topbar{padding:18px 28px 0;}.screen{padding-bottom:28px;}input,textarea,select{font-size:13px;}}
 @media(min-width:1024px){
   /* Fixed left nav */
