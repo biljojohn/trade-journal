@@ -133,7 +133,7 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
 
   <!-- TOP BAR (mobile/tablet only) -->
   <div id="topbar">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
       <div>
         <div class="topbar-title">Trade Journal</div>
         <div class="topbar-sub" id="top-sub">Trader · All Brokers Supported</div>
@@ -146,7 +146,12 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
         </button>
       </div>
     </div>
-    <div id="sync-status" style="font-size:10px;color:var(--text3);margin-bottom:4px;margin-top:-10px;"><span style="color:var(--text3);">&#128274; Local only — Sign in to sync</span></div>
+
+    <!-- Market Mode Quick Switcher -->
+    <div id="topbar-market-switcher" style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;">
+    </div>
+
+    <div id="sync-status" style="font-size:10px;color:var(--text3);margin-bottom:4px;margin-top:-6px;"><span style="color:var(--text3);">&#128274; Local only — Sign in to sync</span></div>
   </div>
 
   <!-- CONTENT -->
@@ -2148,32 +2153,53 @@ const MARKET_CONFIG = {
 // Dynamic currency symbol — always reads from current mode
 let CURR_SYMBOL = '₹';
 
+function renderMarketSwitcher(){
+  var sw = document.getElementById('topbar-market-switcher');
+  if(!sw) return;
+  var modes = [
+    {key:'indian',     cfg:MARKET_CONFIG.indian},
+    {key:'forex',      cfg:MARKET_CONFIG.forex},
+    {key:'crypto',     cfg:MARKET_CONFIG.crypto},
+    {key:'commodities',cfg:MARKET_CONFIG.commodities}
+  ];
+  var html = '';
+  modes.forEach(function(m){
+    var isActive = MARKET_MODE === m.key;
+    var borderCol = isActive ? m.cfg.color : 'var(--border2)';
+    var bgCol     = isActive ? 'rgba(99,99,99,0.18)' : 'var(--card)';
+    var textCol   = isActive ? m.cfg.color : 'var(--text3)';
+    var extra     = isActive ? ' (' + m.cfg.sym + ')' : '';
+    html += '<button onclick="setMarketMode(\'' + m.key + '\')" ';
+    html += 'style="flex-shrink:0;padding:6px 12px;border-radius:20px;';
+    html += 'border:1.5px solid ' + borderCol + ';';
+    html += 'background:' + bgCol + ';';
+    html += 'cursor:pointer;font-family:var(--font);font-size:11px;font-weight:700;';
+    html += 'color:' + textCol + ';transition:all .15s;-webkit-tap-highlight-color:transparent;white-space:nowrap;">';
+    html += m.cfg.flag + ' ' + m.cfg.name + extra;
+    html += '</button>';
+  });
+  sw.innerHTML = html;
+}
+
 function setMarketMode(mode){
-  MARKET_MODE  = mode;
-  CURR_SYMBOL  = MARKET_CONFIG[mode].sym;
-  // Save to settings
+  MARKET_MODE = mode;
+  CURR_SYMBOL = MARKET_CONFIG[mode].sym;
+  // Save mode only — never auto-change capital
   try{ localStorage.setItem('market_mode', mode); }catch(e){}
 
-  // Update capital & target defaults when switching markets
-  const cfg = MARKET_CONFIG[mode];
-  if(mode !== 'indian'){
-    // Check if current capital looks like Indian (> 50000 = likely rupees)
-    if(INITIAL_CAPITAL > 50000){
-      INITIAL_CAPITAL = cfg.capitalDefault;
-      TARGET = cfg.planTargetDefault;
-      saveSettings(INITIAL_CAPITAL, TARGET, USER_NAME);
-    }
-  } else {
-    // Switching back to Indian — if capital looks like USD (< 50000)
-    if(INITIAL_CAPITAL < 50000){
-      INITIAL_CAPITAL = 500000;
-      TARGET = 10000000;
-      saveSettings(INITIAL_CAPITAL, TARGET, USER_NAME);
-    }
-  }
+  // Load this market's own separate journal and settings
+  loadJournal();
+  loadSettings();
+  selectedDate = null;
 
-  // Update UI
+  const cfg = MARKET_CONFIG[mode];
   showToast(cfg.flag+' Switched to '+cfg.name+' · '+cfg.sym+(mode==='indian'?' INR':' USD'));
+
+  // Update topbar
+  const subEl = document.getElementById('top-sub');
+  if(subEl) subEl.textContent = (USER_NAME||'Trader')+' · '+(mode==='indian'?'Indian Market':'USD Market');
+  renderMarketSwitcher();
+
   renderTopStats(); renderCalendar();
   if(document.getElementById('screen-plan').classList.contains('active')) renderPlan();
   if(document.getElementById('screen-stats').classList.contains('active')) renderStats();
@@ -4632,12 +4658,13 @@ function renderManualEntryRecent(){
     }).join('');
 }
 
+loadMarketMode();  // load mode first so storage keys correct
 loadSettings();
 loadJournal();
-loadMarketMode();
 
-// Set topbar name
-document.getElementById('top-sub').textContent = USER_NAME + ' · All Brokers Supported';
+// Set topbar name & market switcher
+document.getElementById('top-sub').textContent = (USER_NAME||'Trader') + ' · ' + (MARKET_MODE==='indian'?'Indian Market':'USD Market');
+renderMarketSwitcher();
 
 renderTopStats();
 renderCalendar();
