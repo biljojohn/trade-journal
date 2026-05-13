@@ -115,17 +115,69 @@ body{font-family:var(--font);color:var(--text);background:var(--bg);-webkit-font
 /* iOS input zoom fix */
 input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--font);font-size:16px;}
 /* Responsive */
-@media(min-width:768px){#topbar{padding:18px 28px 0;}.screen{padding-bottom:28px;}input,textarea,select{font-size:13px;}}
-@media(min-width:1024px){
-  #content{display:-webkit-flex;display:flex;}
-  .screen{position:relative;flex:1;}
-  #bottomnav{-webkit-flex-direction:column;flex-direction:column;width:88px;border-top:none;border-right:1px solid var(--border);height:100%;padding:20px 0 0;}
-  .nav-item{flex:none;padding:18px 4px;}
-  .nav-item.active::before{top:auto;left:0;bottom:50%;transform:translateY(50%);width:3px;height:36px;border-radius:0 4px 4px 0;}
-  #app{flex-direction:row;}
-  #topbar{display:block;}
-  #nav-auth-btn{display:flex!important;}
-  #nav-market-switcher{display:flex!important;}
+@media(min-width:768px){
+  /* ── Desktop/Tablet layout ── */
+  /* Nav: fixed left sidebar */
+  #bottomnav{
+    position:fixed !important;
+    left:0; top:0; bottom:0;
+    width:88px !important;
+    display:-webkit-flex !important;
+    display:flex !important;
+    -webkit-flex-direction:column;
+    flex-direction:column;
+    align-items:center;
+    background:var(--bg2);
+    border-right:1px solid var(--border);
+    border-top:none !important;
+    padding:14px 0 10px !important;
+    overflow-y:auto;
+    overflow-x:hidden;
+    z-index:200;
+  }
+  /* Topbar: fixed at top, offset from nav */
+  #topbar{
+    position:fixed !important;
+    top:0; left:88px; right:0;
+    z-index:150;
+    padding:14px 28px 0;
+    background:var(--bg2);
+    border-bottom:1px solid var(--border);
+  }
+  #topbar-market-switcher{display:none !important;}
+  /* App: reset flex */
+  #app{
+    display:block !important;
+    height:100vh;height:100dvh;
+  }
+  /* Content: offset for fixed nav + topbar */
+  #content{
+    margin-left:88px;
+    height:100vh; height:100dvh;
+    overflow:hidden;
+    position:relative;
+  }
+  /* Screens fill content area */
+  .screen{
+    position:absolute;top:0;left:0;right:0;bottom:0;
+    padding-bottom:0;
+    /* Will be offset for topbar height via JS or padding-top */
+  }
+  /* Nav items */
+  .nav-item{
+    flex:none;
+    width:100%;
+    padding:14px 4px;
+  }
+  .nav-item.active::before{
+    top:auto; left:0; bottom:50%;
+    transform:translateY(50%);
+    width:3px; height:36px;
+    border-radius:0 4px 4px 0;
+  }
+  #nav-auth-btn{display:flex !important;}
+  #nav-market-switcher{display:flex !important;}
+  input,textarea,select{font-size:13px;}
 }
 </style>
 </head>
@@ -2166,40 +2218,44 @@ function renderMarketSwitcher(){
     {key:'commodities',cfg:MARKET_CONFIG.commodities}
   ];
 
-  // Top bar (mobile/tablet)
+  // Top bar (mobile only — hidden on desktop via CSS)
   var sw = document.getElementById('topbar-market-switcher');
   if(sw){
     var html = '';
     modes.forEach(function(m){
       var isActive = MARKET_MODE === m.key;
+      var ac = m.cfg.color;
       html += '<button onclick="setMarketMode(\'' + m.key + '\')" ';
-      html += 'style="flex-shrink:0;padding:6px 12px;border-radius:20px;';
-      html += 'border:1.5px solid ' + (isActive ? m.cfg.color : 'var(--border2)') + ';';
-      html += 'background:' + (isActive ? 'rgba(99,99,99,0.18)' : 'var(--card)') + ';';
-      html += 'cursor:pointer;font-family:var(--font);font-size:11px;font-weight:700;';
-      html += 'color:' + (isActive ? m.cfg.color : 'var(--text3)') + ';';
+      html += 'style="flex-shrink:0;padding:6px 14px;border-radius:20px;';
+      html += 'border:2px solid ' + (isActive ? ac : 'var(--border2)') + ';';
+      html += 'background:' + (isActive ? ac + '28' : 'var(--card)') + ';';
+      html += 'cursor:pointer;font-family:var(--font);font-size:11px;font-weight:800;';
+      html += 'color:' + (isActive ? ac : 'var(--text3)') + ';';
       html += 'transition:all .15s;-webkit-tap-highlight-color:transparent;white-space:nowrap;">';
-      html += m.cfg.flag + ' ' + m.cfg.name + (isActive ? ' (' + m.cfg.sym + ')' : '');
+      html += m.cfg.flag + ' ' + m.cfg.name;
+      if(isActive) html += ' <span style="font-size:9px;opacity:0.9;">✓</span>';
       html += '</button>';
     });
     sw.innerHTML = html;
   }
 
-  // Sidebar nav (desktop)
+  // Sidebar nav (desktop) — clearly shows which is active with colored dot + border
   var nav = document.getElementById('nav-market-switcher');
   if(nav){
-    var navHtml = '<div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;text-align:center;">Market</div>';
+    var navHtml = '<div style="font-size:8px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;text-align:center;padding:0 4px;">Market</div>';
     modes.forEach(function(m){
       var isActive = MARKET_MODE === m.key;
+      var ac = m.cfg.color;
       navHtml += '<button onclick="setMarketMode(\'' + m.key + '\')" title="' + m.cfg.name + '" ';
-      navHtml += 'style="width:64px;padding:5px 2px;border-radius:8px;';
-      navHtml += 'border:1.5px solid ' + (isActive ? m.cfg.color : 'var(--border2)') + ';';
-      navHtml += 'background:' + (isActive ? 'rgba(99,99,99,0.18)' : 'transparent') + ';';
-      navHtml += 'cursor:pointer;font-size:10px;font-weight:700;';
-      navHtml += 'color:' + (isActive ? m.cfg.color : 'var(--text3)') + ';';
-      navHtml += 'transition:all .15s;-webkit-tap-highlight-color:transparent;text-align:center;display:block;margin-bottom:3px;">';
-      navHtml += '<div style="font-size:15px;line-height:1.3;">' + m.cfg.flag + '</div>';
-      navHtml += '<div style="font-size:8px;">' + m.cfg.sym + '</div>';
+      navHtml += 'style="width:68px;padding:6px 2px 5px;border-radius:10px;';
+      navHtml += 'border:2px solid ' + (isActive ? ac : 'transparent') + ';';
+      navHtml += 'background:' + (isActive ? ac + '1A' : 'transparent') + ';';
+      navHtml += 'cursor:pointer;font-weight:800;';
+      navHtml += 'color:' + (isActive ? ac : 'var(--text3)') + ';';
+      navHtml += 'transition:all .2s;-webkit-tap-highlight-color:transparent;text-align:center;display:block;margin-bottom:4px;position:relative;">';
+      navHtml += '<div style="font-size:18px;line-height:1.3;">' + m.cfg.flag + '</div>';
+      navHtml += '<div style="font-size:8px;font-weight:700;margin-top:1px;opacity:' + (isActive?'1':'0.5') + ';">' + m.cfg.name.split(' ')[0] + '</div>';
+      if(isActive) navHtml += '<div style="position:absolute;top:3px;right:4px;width:7px;height:7px;border-radius:50%;background:' + ac + ';box-shadow:0 0 4px ' + ac + ';"></div>';
       navHtml += '</button>';
     });
     nav.innerHTML = navHtml;
@@ -4703,6 +4759,25 @@ function initApp(){
 
   // Start cloud sync
   initAuth();
+
+  // On desktop: offset content below fixed topbar
+  adjustDesktopLayout();
+  window.addEventListener('resize', adjustDesktopLayout);
+}
+
+function adjustDesktopLayout(){
+  if(window.innerWidth < 768) return;
+  var topbar = document.getElementById('topbar');
+  var content = document.getElementById('content');
+  var nav = document.getElementById('bottomnav');
+  if(!topbar || !content) return;
+  // Wait for topbar to have content
+  requestAnimationFrame(function(){
+    var h = topbar.getBoundingClientRect().height;
+    if(h < 10) h = 70; // fallback
+    content.style.paddingTop = h + 'px';
+    if(nav) nav.style.paddingTop = (h + 10) + 'px';
+  });
 }
 
 if(document.readyState === 'loading'){
