@@ -199,6 +199,10 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
             style="flex:1;padding:11px 8px;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);border:1.5px solid var(--border2);background:transparent;color:var(--text3);transition:all .15s;">
             💸 Charges
           </button>
+          <button id="tab-manual" onclick="switchUploadTab('manual')"
+            style="flex:1;padding:11px 8px;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);border:1.5px solid var(--border2);background:transparent;color:var(--text3);transition:all .15s;">
+            ✏️ Manual
+          </button>
 
         </div>
 
@@ -337,6 +341,58 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
     </div>
 
     <!-- ══ SCREEN 3: TRADE PLAN ══ -->
+
+        <!-- MANUAL P&L ENTRY TAB -->
+        <div id="panel-manual" style="display:none;">
+          <div style="background:linear-gradient(135deg,rgba(139,92,246,0.1),rgba(59,130,246,0.08));border:1px solid rgba(139,92,246,0.3);border-radius:14px;padding:14px;margin-bottom:16px;">
+            <div style="font-size:13px;font-weight:700;color:#a78bfa;margin-bottom:4px;">✏️ Manual P&amp;L Entry</div>
+            <div style="font-size:11px;color:var(--text3);line-height:1.7;">Manually add a trading day — enter date, gross P&amp;L, instruments and a note. Great for brokers without CSV or for quick daily logging.</div>
+          </div>
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">📅 Trading Date</div>
+            <input type="date" id="manual-entry-date" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:14px;color:var(--text);font-family:var(--mono);outline:none;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"/>
+          </div>
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">💰 Gross P&amp;L</div>
+            <div style="display:flex;gap:8px;margin-bottom:8px;">
+              <button id="me-side-profit" onclick="setManualSide('profit')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--green);background:var(--green-dim);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">+ Profit Day</button>
+              <button id="me-side-loss" onclick="setManualSide('loss')" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border2);background:transparent;color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);">- Loss Day</button>
+            </div>
+            <div style="position:relative;">
+              <span id="me-sym" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;font-weight:600;">₹</span>
+              <input type="number" id="manual-entry-pnl" min="0" step="1" placeholder="e.g. 5000" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 14px 12px 28px;font-size:16px;color:var(--text);font-family:var(--mono);outline:none;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'" oninput="updateManualEntryPreview()"/>
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:5px;">Enter absolute amount — Profit/Loss button sets the sign</div>
+          </div>
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">💸 Brokerage &amp; Charges <span style="font-size:10px;font-weight:400;">(optional)</span></div>
+            <div style="position:relative;">
+              <span id="me-brok-sym" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;font-weight:600;">₹</span>
+              <input type="number" id="manual-entry-brok" min="0" step="1" placeholder="e.g. 500" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 14px 12px 28px;font-size:16px;color:var(--text);font-family:var(--mono);outline:none;" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border2)'" oninput="updateManualEntryPreview()"/>
+            </div>
+          </div>
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">📈 Instruments Traded</div>
+            <div id="me-instrument-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:10px;"></div>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="manual-entry-instrument" placeholder="e.g. NIFTY CE, GOLD, BTCUSDT" style="flex:1;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'" onkeydown="if(event.key==='Enter'||event.key===','){event.preventDefault();addManualInstrument();}"/>
+              <button onclick="addManualInstrument()" style="padding:10px 16px;background:var(--card2);border:1px solid var(--border2);border-radius:10px;color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);">Add</button>
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:5px;">Press Enter or comma to add each instrument</div>
+          </div>
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">📝 Quick Note <span style="font-size:10px;font-weight:400;">(optional)</span></div>
+            <textarea id="manual-entry-note" placeholder="e.g. Sold NIFTY 24000 CE at 150, SL hit at 120..." style="width:100%;min-height:80px;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text);font-family:var(--font);outline:none;resize:vertical;line-height:1.6;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"></textarea>
+          </div>
+          <div id="me-preview" style="background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:14px;margin-bottom:14px;font-size:12px;color:var(--text3);">Fill in date and P&amp;L to see preview</div>
+          <button onclick="saveManualEntry()" style="width:100%;padding:14px;background:var(--gold);color:#0A0A12;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);letter-spacing:0.5px;">➕ Add to Journal</button>
+          <div id="me-status" style="margin-top:10px;text-align:center;font-size:12px;min-height:16px;"></div>
+          <div id="me-recent" style="margin-top:20px;"></div>
+        </div>
+
+      </div>
+    </div>
+
     <div class="screen" id="screen-plan">
       <div style="padding:16px 14px;">
 
@@ -441,24 +497,38 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
           <div style="margin-bottom:16px;">
             <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;">Starting Capital</div>
             <div style="position:relative;">
-              <span id="cap-sym" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;font-weight:600;">₹</span>
+              <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;font-weight:600;">₹</span>
               <input id="set-capital" type="number" min="1000"
                 style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:12px 14px 12px 28px;font-size:16px;color:var(--text);font-family:var(--mono);outline:none;"
                 onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"/>
             </div>
-            <div id="cap-btns" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;"></div>
+            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+              <button onclick="document.getElementById('set-capital').value='100000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹1L</button>
+              <button onclick="document.getElementById('set-capital').value='200000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹2L</button>
+              <button onclick="document.getElementById('set-capital').value='500000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹5L</button>
+              <button onclick="document.getElementById('set-capital').value='1000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹10L</button>
+              <button onclick="document.getElementById('set-capital').value='2500000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹25L</button>
+              <button onclick="document.getElementById('set-capital').value='5000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹50L</button>
+            </div>
           </div>
 
           <!-- Target -->
           <div style="margin-bottom:16px;">
             <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;">Target Amount</div>
             <div style="position:relative;">
-              <span id="tgt-sym" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;font-weight:600;">₹</span>
+              <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;font-weight:600;">₹</span>
               <input id="set-target" type="number" min="1000"
                 style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:12px 14px 12px 28px;font-size:16px;color:var(--text);font-family:var(--mono);outline:none;"
                 onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border2)'"/>
             </div>
-            <div id="tgt-btns" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;"></div>
+            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+              <button onclick="document.getElementById('set-target').value='1000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹10L</button>
+              <button onclick="document.getElementById('set-target').value='2500000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹25L</button>
+              <button onclick="document.getElementById('set-target').value='5000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹50L</button>
+              <button onclick="document.getElementById('set-target').value='10000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹1Cr</button>
+              <button onclick="document.getElementById('set-target').value='20000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹2Cr</button>
+              <button onclick="document.getElementById('set-target').value='50000000'" style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">₹5Cr</button>
+            </div>
           </div>
 
           <!-- Live preview -->
@@ -1407,21 +1477,19 @@ function fmtPnl(n,short=false){
 }
 function fmtInr(n){ const sym=CURR_SYMBOL||'₹'; return sym+Math.abs(Math.round(n)).toLocaleString('en-IN'); }
 function fmtL(n){
-  // Returns number+suffix ONLY, no currency symbol
-  // Use fmtC(n) for symbol+number, or fmtC(n)
+  const sym = CURR_SYMBOL||'₹';
   if(MARKET_MODE === 'indian'){
     if(n>=10000000)return(n/10000000).toFixed(2)+' Cr';
     if(n>=100000)return(n/100000).toFixed(2)+'L';
     if(n>=1000)return(n/1000).toFixed(1)+'K';
-    return Math.round(n).toLocaleString('en-IN');
+    return sym+Math.round(n).toLocaleString('en-IN');
   } else {
-    if(n>=1000000)return(n/1000000).toFixed(2)+'M';
-    if(n>=1000)return(n/1000).toFixed(1)+'K';
-    return Math.round(n).toLocaleString('en-US');
+    // USD formatting
+    if(n>=1000000)return sym+(n/1000000).toFixed(2)+'M';
+    if(n>=1000)return sym+(n/1000).toFixed(1)+'K';
+    return sym+Math.round(n).toLocaleString('en-US');
   }
 }
-// Helper: currency symbol + formatted number
-function fmtC(n){ return (CURR_SYMBOL||'₹')+fmtL(n); }
 function shortSym(s){return s.replace(/26[A-Z]{3}/g,'').replace(/([A-Z]+)(\d+)(CE|PE)/,'$1 $2$3');}
 function isWeekend(y,m,d){const wd=new Date(y,m,d).getDay();return wd===0||wd===6;}
 
@@ -2081,12 +2149,30 @@ const MARKET_CONFIG = {
 let CURR_SYMBOL = '₹';
 
 function setMarketMode(mode){
-  MARKET_MODE = mode;
-  CURR_SYMBOL = MARKET_CONFIG[mode].sym;
-  // Save mode only — never auto-change capital or target
+  MARKET_MODE  = mode;
+  CURR_SYMBOL  = MARKET_CONFIG[mode].sym;
+  // Save to settings
   try{ localStorage.setItem('market_mode', mode); }catch(e){}
 
+  // Update capital & target defaults when switching markets
   const cfg = MARKET_CONFIG[mode];
+  if(mode !== 'indian'){
+    // Check if current capital looks like Indian (> 50000 = likely rupees)
+    if(INITIAL_CAPITAL > 50000){
+      INITIAL_CAPITAL = cfg.capitalDefault;
+      TARGET = cfg.planTargetDefault;
+      saveSettings(INITIAL_CAPITAL, TARGET, USER_NAME);
+    }
+  } else {
+    // Switching back to Indian — if capital looks like USD (< 50000)
+    if(INITIAL_CAPITAL < 50000){
+      INITIAL_CAPITAL = 500000;
+      TARGET = 10000000;
+      saveSettings(INITIAL_CAPITAL, TARGET, USER_NAME);
+    }
+  }
+
+  // Update UI
   showToast(cfg.flag+' Switched to '+cfg.name+' · '+cfg.sym+(mode==='indian'?' INR':' USD'));
   renderTopStats(); renderCalendar();
   if(document.getElementById('screen-plan').classList.contains('active')) renderPlan();
@@ -2726,13 +2812,28 @@ function deleteDay(date){
 function switchUploadTab(tab){
   const isTB = tab==='tradebook';
   const isCH = tab==='charges';
+  const isME = tab==='manual';
   document.getElementById('panel-tradebook').style.display = isTB?'block':'none';
   document.getElementById('panel-charges').style.display   = isCH?'block':'none';
+  document.getElementById('panel-manual').style.display    = isME?'block':'none';
   const tb = document.getElementById('tab-tradebook');
   const ch = document.getElementById('tab-charges');
-  [tb,ch].forEach(b=>{ b.style.border='1.5px solid var(--border2)'; b.style.background='transparent'; b.style.color='var(--text3)'; });
+  const me = document.getElementById('tab-manual');
+  [tb,ch,me].forEach(b=>{ if(b){ b.style.border='1.5px solid var(--border2)'; b.style.background='transparent'; b.style.color='var(--text3)'; }});
   if(isTB){ tb.style.border='1.5px solid var(--gold)'; tb.style.background='var(--gold-dim)'; tb.style.color='var(--gold)'; }
   if(isCH){ ch.style.border='1.5px solid var(--red)'; ch.style.background='var(--red-dim)'; ch.style.color='var(--red)'; populateManualDateSelect(); }
+  if(isME){ me.style.border='1.5px solid #a78bfa'; me.style.background='rgba(139,92,246,0.1)'; me.style.color='#a78bfa';
+    // Set today's date and update symbol
+    const today = new Date().toISOString().slice(0,10);
+    const dateEl = document.getElementById('manual-entry-date');
+    if(dateEl && !dateEl.value) dateEl.value = today;
+    const sym = CURR_SYMBOL||'₹';
+    const meSym = document.getElementById('me-sym');
+    const meBrokSym = document.getElementById('me-brok-sym');
+    if(meSym) meSym.textContent = sym;
+    if(meBrokSym) meBrokSym.textContent = sym;
+    renderManualEntryRecent();
+  }
 }
 
 function switchChargesMethod(method){
@@ -2964,15 +3065,15 @@ function renderPlanHero(){
   document.getElementById('plan-eta').textContent=`in ${mthsToTarget(sc)} months with ${sc.label} strategy`;
   document.getElementById('plan-daily').style.color=sc.color;
   document.getElementById('plan-daily').textContent=fmtInr(firstMonth.daily);
-  document.getElementById('plan-daily-pct').textContent=`${(sc.dailyTarget*100).toFixed(1)}% of ${fmtC(INITIAL_CAPITAL)} on Day 1`;
+  document.getElementById('plan-daily-pct').textContent=`${(sc.dailyTarget*100).toFixed(1)}% of ${CURR_SYMBOL}${fmtL(INITIAL_CAPITAL)} on Day 1`;
 
   // Update target label & progress labels with correct currency
   const targetEl = document.getElementById('plan-target-label');
-  if(targetEl) targetEl.textContent = fmtC(TARGET);
+  if(targetEl) targetEl.textContent = CURR_SYMBOL+fmtL(TARGET);
   const startLbl = document.getElementById('plan-start-label');
-  if(startLbl) startLbl.textContent = fmtC(INITIAL_CAPITAL)+' START';
+  if(startLbl) startLbl.textContent = fmtL(INITIAL_CAPITAL)+' START';
   const goalLbl = document.getElementById('plan-goal-label');
-  if(goalLbl) goalLbl.textContent = fmtC(TARGET)+' GOAL';
+  if(goalLbl) goalLbl.textContent = fmtL(TARGET)+' GOAL';
 
   // Actual capital from journal — only reinvested portion is in account
   const days=Object.values(journal);
@@ -2981,7 +3082,7 @@ function renderPlanHero(){
   document.getElementById('plan-progress').style.width=Math.max(pct,3)+'%';
   document.getElementById('plan-progress').style.background=sc.color;
   const planNow = getPlanCapNow(sc);
-  document.getElementById('plan-progress-label').textContent=`You: ${fmtC(actualNet)} | Plan: ${fmtC(planNow)}`;
+  document.getElementById('plan-progress-label').textContent=`You: ${CURR_SYMBOL}${fmtL(actualNet)} | Plan: ${CURR_SYMBOL}${fmtL(planNow)}`;
 
   // -- CURRENT GOALS based on ACTUAL capital --
   const dailyGoal   = actualNet * sc.dailyTarget;
@@ -3069,15 +3170,15 @@ function renderPlanHero(){
       <div style="background:#0a0a14;border:1px solid #1a1a2a;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
         <div>
           <div style="font-size:9px;color:var(--dim);margin-bottom:2px;">TRADING ON</div>
-          <div style="font-size:13px;color:var(--gold);font-weight:600;">${fmtC(actualNet)} capital</div>
+          <div style="font-size:13px;color:var(--gold);font-weight:600;">${CURR_SYMBOL}${fmtL(actualNet)} capital</div>
         </div>
         <div style="text-align:right;">
           <div style="font-size:9px;color:var(--dim);margin-bottom:2px;">MONTHLY WITHDRAW</div>
-          <div style="font-size:13px;color:var(--green);font-weight:600;">${fmtC(monthWithdraw)}</div>
+          <div style="font-size:13px;color:var(--green);font-weight:600;">${CURR_SYMBOL}${fmtL(monthWithdraw)}</div>
         </div>
         <div style="text-align:right;">
           <div style="font-size:9px;color:var(--dim);margin-bottom:2px;">MONTHLY REINVEST</div>
-          <div style="font-size:13px;color:var(--blue);font-weight:600;">${fmtC(monthReinvest)}</div>
+          <div style="font-size:13px;color:var(--blue);font-weight:600;">${CURR_SYMBOL}${fmtL(monthReinvest)}</div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -3107,10 +3208,10 @@ function renderPlanContent(){
             <div class="progress-bar-wrap" style="height:4px;"><div class="progress-bar-fill" style="width:${Math.min(m.end/TARGET*100,100)}%;background:${isSel?sc.color:'#222240'};"></div></div>
           </div>
           <div style="text-align:right;min-width:80px;">
-            <div style="font-size:11px;color:${isSel?sc.color:'#9090b0'};">${fmtC(m.end)}</div>
+            <div style="font-size:11px;color:${isSel?sc.color:'#9090b0'};">${CURR_SYMBOL}${fmtL(m.end)}</div>
             <div style="font-size:9px;color:var(--green);">+${growthPct}%</div>
           </div>
-          <div style="min-width:60px;text-align:right;font-size:9px;color:var(--gold);">W/D ${fmtC(m.withdrawn)}</div>
+          <div style="min-width:60px;text-align:right;font-size:9px;color:var(--gold);">W/D ${CURR_SYMBOL}${fmtL(m.withdrawn)}</div>
         </div>`;
       }).join('')}
       ${journey[planMonth-1]?`
@@ -3209,7 +3310,7 @@ function renderPlanContent(){
       ['⭐','25 Lakh',CURR_SYMBOL+'25K',2500000],
       ['🌟','50 Lakh',CURR_SYMBOL+'50K',5000000],
       ['✨','75 Lakh',CURR_SYMBOL+'75K',7500000],
-      ['🏆','Goal',fmtC(TARGET),10000000],
+      ['🏆','Goal',CURR_SYMBOL+fmtL(TARGET),10000000],
     ];
     const actualNetCap = calcAccountBalance();
 
@@ -3249,7 +3350,7 @@ function renderPlanContent(){
       <div style="background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
         <div>
           <div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:2px;">YOUR CAPITAL (Net after charges)</div>
-          <div style="font-family:var(--head);font-size:20px;font-weight:700;color:var(--gold);">${fmtC(actualNetCap)}</div>
+          <div style="font-family:var(--head);font-size:20px;font-weight:700;color:var(--gold);">${CURR_SYMBOL}${fmtL(actualNetCap)}</div>
         </div>
         <div style="text-align:right;">
           <div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:2px;">STRATEGY</div>
@@ -3276,7 +3377,7 @@ function renderPlanContent(){
           return`<div style="background:var(--card);border:1px solid ${s.best?'#e8c84a33':s.id===activeScenario?s.color+'44':'var(--border)'};border-radius:10px;padding:12px;">
             <div style="font-size:16px;margin-bottom:6px;">${s.emoji}</div>
             <div style="font-size:12px;font-weight:600;color:${s.color};margin-bottom:10px;">${s.label}</div>
-            ${[['To '+fmtC(TARGET),mthsToTarget(s)+' months',true],
+            ${[['To '+CURR_SYMBOL+fmtL(TARGET),mthsToTarget(s)+' months',true],
                ['Daily',`${(s.dailyTarget*100).toFixed(1)}%/day`],
                ['Win Rate',`${s.winRate*100}%`],
                ['R:R',`1:${s.rr}`],
@@ -3298,7 +3399,7 @@ function renderPlanContent(){
         ${[1,2,3,4,5,6,8,10,12,15,18,24].map(mo=>`
           <div style="display:grid;grid-template-columns:30px repeat(3,1fr);gap:4px;padding:4px 0;border-bottom:1px solid #0a0a14;">
             <div style="font-size:9px;color:var(--dim);">M${mo}</div>
-            ${scs.map(s=>{const j=buildJourney(s);const d=j[mo-1];return`<div style="font-size:9px;color:${d&&d.end>=TARGET?'var(--green)':'#666680'};text-align:center;font-weight:${d&&d.end>=TARGET?700:400};">${d?fmtC(d.end)+(d.end>=TARGET?' 🏆':''):'—'}</div>`;}).join('')}
+            ${scs.map(s=>{const j=buildJourney(s);const d=j[mo-1];return`<div style="font-size:9px;color:${d&&d.end>=TARGET?'var(--green)':'#666680'};text-align:center;font-weight:${d&&d.end>=TARGET?700:400};">${d?CURR_SYMBOL+fmtL(d.end)+(d.end>=TARGET?' 🏆':''):'—'}</div>`;}).join('')}
           </div>`).join('')}
       </div>
     `;
@@ -3434,24 +3535,24 @@ function renderStats(){
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
         <div>
           <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:4px;">ACCOUNT BALANCE</div>
-          <div style="font-family:var(--head);font-size:36px;font-weight:800;color:var(--gold);letter-spacing:-1px;line-height:1;">${fmtC(actualCap)}</div>
+          <div style="font-family:var(--head);font-size:36px;font-weight:800;color:var(--gold);letter-spacing:-1px;line-height:1;">${CURR_SYMBOL}${fmtL(actualCap)}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:4px;">Capital in account after 70/30 split</div>
           <div style="display:flex;gap:10px;margin-top:5px;flex-wrap:wrap;">
             <span style="font-size:11px;color:${net>=0?'var(--green)':'var(--red)'};font-weight:600;">${fmtPnl(net,true)} net P&L</span>
-            <span style="font-size:11px;color:var(--green);">💰 ${fmtC(totalWithdrawnAmt)} withdrawn</span>
+            <span style="font-size:11px;color:var(--green);">💰 ${CURR_SYMBOL}${fmtL(totalWithdrawnAmt)} withdrawn</span>
           </div>
         </div>
         <div style="text-align:right;">
           <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:4px;">TARGET</div>
-          <div style="font-family:var(--head);font-size:24px;font-weight:800;color:var(--text3);">${fmtC(TARGET)}</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:4px;">${fmtC(TARGET-actualCap)} remaining</div>
+          <div style="font-family:var(--head);font-size:24px;font-weight:800;color:var(--text3);">${CURR_SYMBOL}${fmtL(TARGET)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px;">${CURR_SYMBOL}${fmtL(TARGET-actualCap)} remaining</div>
         </div>
       </div>
       <div style="margin-bottom:14px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-          <span style="font-size:11px;color:var(--text3);">${fmtC(INITIAL_CAPITAL)}</span>
-          <span style="font-size:12px;color:var(--gold);font-weight:700;">${pct.toFixed(1)}% to ${fmtC(TARGET)}</span>
-          <span style="font-size:11px;color:var(--text3);">${fmtC(TARGET)} Goal</span>
+          <span style="font-size:11px;color:var(--text3);">${CURR_SYMBOL}${fmtL(INITIAL_CAPITAL)}</span>
+          <span style="font-size:12px;color:var(--gold);font-weight:700;">${pct.toFixed(1)}% to ${CURR_SYMBOL}${fmtL(TARGET)}</span>
+          <span style="font-size:11px;color:var(--text3);">${CURR_SYMBOL}${fmtL(TARGET)} Goal</span>
         </div>
         <div class="progress-bar-wrap" style="height:10px;">
           <div class="progress-bar-fill" style="width:${Math.max(pct,1.5)}%;background:linear-gradient(90deg,var(--gold),#F0D868);"></div>
@@ -3460,7 +3561,7 @@ function renderStats(){
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
         <div style="background:var(--card);border-radius:10px;padding:10px;text-align:center;">
           <div style="font-size:9px;color:var(--text3);font-weight:600;margin-bottom:4px;">PLAN TARGET</div>
-          <div style="font-family:var(--head);font-size:15px;font-weight:700;color:var(--gold);">${fmtC(planCap)}</div>
+          <div style="font-family:var(--head);font-size:15px;font-weight:700;color:var(--gold);">${CURR_SYMBOL}${fmtL(planCap)}</div>
         </div>
         <div style="background:${actualCap>=planCap?'var(--green-dim)':'var(--red-dim)'};border:1px solid ${actualCap>=planCap?'#1A4A2A':'#4A1A1A'};border-radius:10px;padding:10px;text-align:center;">
           <div style="font-size:9px;color:var(--text3);font-weight:600;margin-bottom:4px;">VS PLAN</div>
@@ -3487,17 +3588,17 @@ function renderStats(){
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
       <div style="background:var(--green-dim);border:1px solid #1A4A2A;border-radius:12px;padding:14px;">
         <div style="font-size:9px;color:#22C55E88;letter-spacing:1.5px;margin-bottom:6px;">💰 WITHDRAWN</div>
-        <div style="font-family:var(--head);font-size:18px;font-weight:700;color:var(--green);">${fmtC(totalWithdrawn)}</div>
+        <div style="font-family:var(--head);font-size:18px;font-weight:700;color:var(--green);">${CURR_SYMBOL}${fmtL(totalWithdrawn)}</div>
         <div style="font-size:9px;color:#22C55E66;margin-top:4px;">30% of net profits</div>
       </div>
       <div style="background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:14px;">
         <div style="font-size:9px;color:#3B82F688;letter-spacing:1.5px;margin-bottom:6px;">📈 REINVESTED</div>
-        <div style="font-family:var(--head);font-size:18px;font-weight:700;color:var(--blue);">${fmtC(totalReinvested)}</div>
+        <div style="font-family:var(--head);font-size:18px;font-weight:700;color:var(--blue);">${CURR_SYMBOL}${fmtL(totalReinvested)}</div>
         <div style="font-size:9px;color:#3B82F666;margin-top:4px;">70% compounding</div>
       </div>
       <div style="background:var(--red-dim);border:1px solid #4A1A1A;border-radius:12px;padding:14px;">
         <div style="font-size:9px;color:#EF444488;letter-spacing:1.5px;margin-bottom:6px;">💸 CHARGES</div>
-        <div style="font-family:var(--head);font-size:18px;font-weight:700;color:var(--red);">−${fmtC(totalBrok)}</div>
+        <div style="font-family:var(--head);font-size:18px;font-weight:700;color:var(--red);">−${CURR_SYMBOL}${fmtL(totalBrok)}</div>
         <div style="font-size:9px;color:#EF444466;margin-top:4px;">${days.filter(d=>d.brokerage>0).length} days logged</div>
       </div>
     </div>
@@ -3519,25 +3620,25 @@ function renderStats(){
             </div>
             <div>
               <div class="progress-bar-wrap" style="height:4px;margin-bottom:2px;"><div class="progress-bar-fill" style="width:${barW}%;background:${m.net>=0?'var(--green)':'var(--red)'};"></div></div>
-              <div style="font-size:9px;color:var(--text3);">${fmtC(m.endCap)}</div>
+              <div style="font-size:9px;color:var(--text3);">${CURR_SYMBOL}${fmtL(m.endCap)}</div>
             </div>
             <div style="text-align:right;font-size:11px;font-weight:700;color:${m.net>=0?'var(--green)':'var(--red)'};">${fmtPnl(m.net,true)}</div>
-            <div style="text-align:right;font-size:10px;color:var(--red);">${m.brok>0?'−'+fmtC(m.brok):'—'}</div>
-            <div style="text-align:right;font-size:10px;color:${m.withdraw>0?'var(--green)':'var(--text3)'};">${m.withdraw>0?fmtC(m.withdraw):'—'}</div>
-            <div style="text-align:right;font-size:10px;color:${m.net>0?'var(--blue)':'var(--red)'};">${m.net>0?fmtC(m.reinvest):fmtPnl(m.reinvest,true)}</div>
+            <div style="text-align:right;font-size:10px;color:var(--red);">${m.brok>0?'−'+CURR_SYMBOL+fmtL(m.brok):'—'}</div>
+            <div style="text-align:right;font-size:10px;color:${m.withdraw>0?'var(--green)':'var(--text3)'};">${m.withdraw>0?CURR_SYMBOL+fmtL(m.withdraw):'—'}</div>
+            <div style="text-align:right;font-size:10px;color:${m.net>0?'var(--blue)':'var(--red)'};">${m.net>0?CURR_SYMBOL+fmtL(m.reinvest):fmtPnl(m.reinvest,true)}</div>
           </div>
           <span style="font-size:9px;padding:1px 8px;border-radius:8px;background:${m.endCap>=m.planEnd?'var(--green-dim)':'var(--red-dim)'};border:1px solid ${m.endCap>=m.planEnd?'#1A4A2A':'#4A1A1A'};color:${m.endCap>=m.planEnd?'var(--green)':'var(--red)'};">
-            vs plan ${fmtC(m.planEnd)} · ${m.endCap>=m.planEnd?'▲ Ahead':'▼ Behind'} ${fmtC(Math.abs(m.endCap-m.planEnd))}
+            vs plan ${CURR_SYMBOL}${fmtL(m.planEnd)} · ${m.endCap>=m.planEnd?'▲ Ahead':'▼ Behind'} ${CURR_SYMBOL}${fmtL(Math.abs(m.endCap-m.planEnd))}
           </span>
         </div>`;
       }).join('')}
       <div style="display:grid;grid-template-columns:60px 1fr 60px 52px 52px 52px;gap:4px;padding:8px 0 0;border-top:1px solid var(--border2);margin-top:4px;">
         <div style="font-size:10px;font-weight:700;color:var(--gold);">TOTAL</div>
-        <div style="font-size:10px;font-weight:700;color:var(--gold);">${fmtC(actualCap)}</div>
+        <div style="font-size:10px;font-weight:700;color:var(--gold);">${CURR_SYMBOL}${fmtL(actualCap)}</div>
         <div style="text-align:right;font-size:10px;font-weight:700;color:${net>=0?'var(--green)':'var(--red)'};">${fmtPnl(net,true)}</div>
-        <div style="text-align:right;font-size:10px;color:var(--red);">−${fmtC(totalBrok)}</div>
-        <div style="text-align:right;font-size:10px;color:var(--green);">${fmtC(totalWithdrawn)}</div>
-        <div style="text-align:right;font-size:10px;color:var(--blue);">${fmtC(totalReinvested)}</div>
+        <div style="text-align:right;font-size:10px;color:var(--red);">−${CURR_SYMBOL}${fmtL(totalBrok)}</div>
+        <div style="text-align:right;font-size:10px;color:var(--green);">${CURR_SYMBOL}${fmtL(totalWithdrawn)}</div>
+        <div style="text-align:right;font-size:10px;color:var(--blue);">${CURR_SYMBOL}${fmtL(totalReinvested)}</div>
       </div>
     </div>
 
@@ -3552,7 +3653,7 @@ function renderStats(){
         ['Avg Win Net',    fmtPnl(avgWin,true),                                      'var(--green)'],
         ['Avg Loss Net',   fmtPnl(avgLoss,true),                                     'var(--red)'],
         ['Profit Factor',  losses.length&&avgLoss?(Math.abs(avgWin)/Math.abs(avgLoss)).toFixed(2)+'x':'—','var(--gold)'],
-        ['Total Charges',  '−'+fmtC(totalBrok),                                    'var(--red)'],
+        ['Total Charges',  '−'+CURR_SYMBOL+fmtL(totalBrok),                                    'var(--red)'],
       ].map(([l,v,c])=>`<div class="card card-pad">
         <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:0.5px;margin-bottom:6px;">${l}</div>
         <div style="font-family:var(--head);font-size:18px;font-weight:700;color:${c};">${v}</div>
@@ -3803,7 +3904,7 @@ function renderGrowth(){
         <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px;">
           <div>
             <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:3px;">ACCOUNT BALANCE</div>
-            <div style="font-family:var(--head);font-size:36px;font-weight:800;color:var(--gold);letter-spacing:-1px;line-height:1;">${fmtC(currentCap)}</div>
+            <div style="font-family:var(--head);font-size:36px;font-weight:800;color:var(--gold);letter-spacing:-1px;line-height:1;">${CURR_SYMBOL}${fmtL(currentCap)}</div>
             <div style="font-size:11px;color:var(--text3);margin-top:3px;">In account · 70% reinvested</div>
             <div style="font-size:12px;margin-top:4px;color:${totalNet>=0?'var(--green)':'var(--red)'};font-weight:600;">
               ${totalNet>=0?'▲':'▼'} ${fmtPnl(totalNet,true)} (${growthPct}%) net P&L
@@ -3812,7 +3913,7 @@ function renderGrowth(){
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;text-align:center;">
             <div style="background:var(--card);border-radius:10px;padding:8px 12px;">
               <div style="font-size:9px;color:var(--text3);font-weight:600;margin-bottom:3px;">START</div>
-              <div style="font-family:var(--head);font-size:14px;color:var(--text2);">${fmtC(INITIAL_CAPITAL)}</div>
+              <div style="font-family:var(--head);font-size:14px;color:var(--text2);">${CURR_SYMBOL}${fmtL(INITIAL_CAPITAL)}</div>
             </div>
             <div style="background:${currentCap>=planFinal?'var(--green-dim)':'var(--red-dim)'};border:1px solid ${currentCap>=planFinal?'#1A4A2A':'#4A1A1A'};border-radius:10px;padding:8px 12px;">
               <div style="font-size:9px;color:var(--text3);font-weight:600;margin-bottom:3px;">VS PLAN</div>
@@ -3823,9 +3924,9 @@ function renderGrowth(){
         <!-- Progress to 1Cr -->
         <div style="margin-top:14px;">
           <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-            <span style="font-size:10px;color:var(--text3);">${fmtC(INITIAL_CAPITAL)}</span>
+            <span style="font-size:10px;color:var(--text3);">${CURR_SYMBOL}${fmtL(INITIAL_CAPITAL)}</span>
             <span style="font-size:11px;color:var(--gold);font-weight:700;">${((currentCap/TARGET)*100).toFixed(2)}% to ₹1 Crore</span>
-            <span style="font-size:10px;color:var(--text3);">${fmtC(TARGET)}</span>
+            <span style="font-size:10px;color:var(--text3);">${CURR_SYMBOL}${fmtL(TARGET)}</span>
           </div>
           <div class="progress-bar-wrap" style="height:8px;">
             <div class="progress-bar-fill" style="width:${Math.max((currentCap/TARGET)*100,0.5)}%;background:linear-gradient(90deg,var(--gold),#F0D868);"></div>
@@ -3835,11 +3936,11 @@ function renderGrowth(){
 
       ${[
         ['💰 Gross P&L',   fmtPnl(totalGross,true),  totalGross>=0?'var(--green)':'var(--red)'],
-        ['💸 Charges',     '−'+fmtC(totalBrok),     'var(--red)'],
+        ['💸 Charges',     '−'+CURR_SYMBOL+fmtL(totalBrok),     'var(--red)'],
         ['✅ Net P&L',     fmtPnl(totalNet,true),     totalNet>=0?'var(--green)':'var(--red)'],
         ['📉 Max Drawdown',maxDD.toFixed(1)+'%',      'var(--red)'],
-        ['🏦 Withdrawn',   fmtC(totalWithdrawn), 'var(--green)'],
-        ['🔄 Reinvested',  fmtC(totalReinvested), 'var(--blue)'],
+        ['🏦 Withdrawn',   CURR_SYMBOL+fmtL(totalWithdrawn), 'var(--green)'],
+        ['🔄 Reinvested',  CURR_SYMBOL+fmtL(totalReinvested), 'var(--blue)'],
         ['🔥 Best Streak', winStreak+' days',         'var(--green)'],
         ['❄️ Loss Streak', lossStreak+' days',        'var(--red)'],
       ].map(([l,v,c])=>`
@@ -3911,7 +4012,7 @@ function renderGrowth(){
 
         const fmt = v => {
           const a = Math.abs(v);
-          return fmtC(Math.abs(v));
+          return CURR_SYMBOL+(a >= 100000 ? (v/100000).toFixed(1)+'L' : a >= 1000 ? (v/1000).toFixed(0)+'K' : Math.round(v).toString());
         };
 
         let svgContent = '';
@@ -3968,11 +4069,11 @@ function renderGrowth(){
           </div>
           <div style="text-align:center;border-left:1px solid var(--border);border-right:1px solid var(--border);">
             <div style="font-size:9px;color:var(--green);font-weight:600;margin-bottom:3px;text-transform:uppercase;">💰 Total Withdrawn</div>
-            <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--green);">${fmtC(totalWithdrawn)}</div>
+            <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--green);">${CURR_SYMBOL}${fmtL(totalWithdrawn)}</div>
           </div>
           <div style="text-align:center;">
             <div style="font-size:9px;color:var(--blue);font-weight:600;margin-bottom:3px;text-transform:uppercase;">🔄 Total Reinvested</div>
-            <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--blue);">${fmtC(totalReinvested)}</div>
+            <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--blue);">${CURR_SYMBOL}${fmtL(totalReinvested)}</div>
           </div>
         </div>`;
       })()}
@@ -4011,17 +4112,17 @@ function renderGrowth(){
               <div style="font-family:var(--head);font-size:14px;font-weight:700;color:${(m.net||0)>=0?'var(--green)':'var(--red)'};margin-top:2px;">${netDisplay}</div>
             </div>
             <div style="text-align:right;">
-              <div style="font-size:11px;color:var(--red);font-weight:600;">${m.brok>0?'−'+fmtC(m.brok):'—'}</div>
+              <div style="font-size:11px;color:var(--red);font-weight:600;">${m.brok>0?'−'+CURR_SYMBOL+fmtL(m.brok):'—'}</div>
             </div>
             <div style="text-align:right;">
               ${m.profit>0
-                ?`<div style="font-size:11px;font-weight:700;color:var(--green);">${fmtC(m.withdraw)}</div>
+                ?`<div style="font-size:11px;font-weight:700;color:var(--green);">${CURR_SYMBOL}${fmtL(m.withdraw)}</div>
                   <div style="font-size:9px;color:var(--green);opacity:.6;">pocket</div>`
                 :`<div style="font-size:10px;color:var(--text3);">—</div>`}
             </div>
             <div style="text-align:right;">
               ${m.profit>0
-                ?`<div style="font-size:11px;font-weight:700;color:var(--blue);">${fmtC(m.reinvest)}</div>
+                ?`<div style="font-size:11px;font-weight:700;color:var(--blue);">${CURR_SYMBOL}${fmtL(m.reinvest)}</div>
                   <div style="font-size:9px;color:var(--blue);opacity:.6;">back in</div>`
                 :`<div style="font-size:10px;color:var(--red);">${fmtPnl(m.profit||0,true)}</div>
                   <div style="font-size:9px;color:var(--text3);">absorbed</div>`}
@@ -4034,9 +4135,9 @@ function renderGrowth(){
       <div style="display:grid;grid-template-columns:72px 1fr 64px 56px 56px;gap:4px;padding:10px 0 0;border-top:1px solid var(--border2);margin-top:2px;">
         <div style="font-size:11px;font-weight:700;color:var(--gold);">TOTAL</div>
         <div style="font-family:var(--head);font-size:13px;font-weight:700;color:${totalNet>=0?'var(--green)':'var(--red)'};">${fmtPnl(totalNet,true)}</div>
-        <div style="text-align:right;font-size:11px;color:var(--red);font-weight:600;">−${fmtC(totalBrok)}</div>
-        <div style="text-align:right;font-family:var(--head);font-size:13px;font-weight:700;color:var(--green);">${fmtC(totalWithdrawn)}</div>
-        <div style="text-align:right;font-family:var(--head);font-size:13px;font-weight:700;color:var(--blue);">${fmtC(totalReinvested)}</div>
+        <div style="text-align:right;font-size:11px;color:var(--red);font-weight:600;">−${CURR_SYMBOL}${fmtL(totalBrok)}</div>
+        <div style="text-align:right;font-family:var(--head);font-size:13px;font-weight:700;color:var(--green);">${CURR_SYMBOL}${fmtL(totalWithdrawn)}</div>
+        <div style="text-align:right;font-family:var(--head);font-size:13px;font-weight:700;color:var(--blue);">${CURR_SYMBOL}${fmtL(totalReinvested)}</div>
       </div>
     </div>
   `;
@@ -4062,11 +4163,11 @@ function renderPrediction(){
 
   // Milestones: plan month vs actual status
   const milestones = [
-    {label:fmtC(1000000), emoji:'💫', val:1000000},
-    {label:fmtC(2500000), emoji:'⭐', val:2500000},
-    {label:fmtC(5000000), emoji:'🌟', val:5000000},
-    {label:fmtC(7500000), emoji:'✨', val:7500000},
-    {label:fmtC(TARGET), emoji:'🏆', val:TARGET},
+    {label:CURR_SYMBOL+fmtL(1000000), emoji:'💫', val:1000000},
+    {label:CURR_SYMBOL+fmtL(2500000), emoji:'⭐', val:2500000},
+    {label:CURR_SYMBOL+fmtL(5000000), emoji:'🌟', val:5000000},
+    {label:CURR_SYMBOL+fmtL(7500000), emoji:'✨', val:7500000},
+    {label:CURR_SYMBOL+fmtL(TARGET), emoji:'🏆', val:TARGET},
   ];
 
   const totalNet = Object.values(journal).reduce((s,d)=>s+netOf(d),0);
@@ -4096,7 +4197,7 @@ function renderPrediction(){
           <div style="font-size:16px;font-weight:800;color:${isAhead?'var(--green)':'var(--red)'};">
             ${isAhead ? '▲ AHEAD OF PLAN 🔥' : '▼ BEHIND PLAN'}
           </div>
-          <div style="font-size:12px;color:var(--text3);margin-top:3px;">by ${fmtC(diff)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:3px;">by ${CURR_SYMBOL}${fmtL(diff)}</div>
         </div>
         <div style="width:56px;height:56px;border-radius:50%;background:${isAhead?'var(--green-dim)':'var(--red-dim)'};border:2px solid ${isAhead?'var(--green)':'var(--red)'};display:flex;align-items:center;justify-content:center;font-size:24px;">
           ${isAhead?'🚀':'⚠️'}
@@ -4108,7 +4209,7 @@ function renderPrediction(){
         <!-- Plan -->
         <div style="background:rgba(245,200,66,0.07);border:1px solid rgba(245,200,66,0.2);border-radius:12px;padding:14px;">
           <div style="font-size:10px;color:var(--gold);font-weight:700;letter-spacing:1px;margin-bottom:6px;">📋 PLAN SAYS</div>
-          <div style="font-family:var(--head);font-size:20px;font-weight:800;color:var(--gold);line-height:1;">${fmtC(planNow)}</div>
+          <div style="font-family:var(--head);font-size:20px;font-weight:800;color:var(--gold);line-height:1;">${CURR_SYMBOL}${fmtL(planNow)}</div>
           <div style="font-size:10px;color:var(--text3);margin-top:5px;">${sc.label} strategy</div>
           <div style="font-size:10px;color:var(--text3);">${(sc.dailyTarget*100).toFixed(1)}%/day target</div>
         </div>
@@ -4117,17 +4218,17 @@ function renderPrediction(){
         <!-- Actual -->
         <div style="background:${isAhead?'rgba(34,197,94,0.08)':'rgba(239,68,68,0.08)'};border:1px solid ${isAhead?'#1A4A2A':'#4A1A1A'};border-radius:12px;padding:14px;">
           <div style="font-size:10px;color:${isAhead?'var(--green)':'var(--red)'};font-weight:700;letter-spacing:1px;margin-bottom:6px;">💰 YOU HAVE</div>
-          <div style="font-family:var(--head);font-size:20px;font-weight:800;color:${isAhead?'var(--green)':'var(--red)'};line-height:1;">${fmtC(accountBal)}</div>
+          <div style="font-family:var(--head);font-size:20px;font-weight:800;color:${isAhead?'var(--green)':'var(--red)'};line-height:1;">${CURR_SYMBOL}${fmtL(accountBal)}</div>
           <div style="font-size:10px;color:var(--text3);margin-top:5px;">In account</div>
-          <div style="font-size:10px;color:var(--green);">+ ${fmtC(totalWithdrawn)} withdrawn</div>
+          <div style="font-size:10px;color:var(--green);">+ ${CURR_SYMBOL}${fmtL(totalWithdrawn)} withdrawn</div>
         </div>
       </div>
 
       <!-- Progress bar -->
       <div style="margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-          <span style="font-size:10px;color:var(--text3);">Start ${fmtC(INITIAL_CAPITAL)}</span>
-          <span style="font-size:11px;color:var(--gold);font-weight:700;">${((accountBal/TARGET)*100).toFixed(2)}% to ${fmtC(TARGET)}</span>
+          <span style="font-size:10px;color:var(--text3);">Start ${CURR_SYMBOL}${fmtL(INITIAL_CAPITAL)}</span>
+          <span style="font-size:11px;color:var(--gold);font-weight:700;">${((accountBal/TARGET)*100).toFixed(2)}% to ${CURR_SYMBOL}${fmtL(TARGET)}</span>
           <span style="font-size:10px;color:var(--text3);">Target</span>
         </div>
         <!-- Combined progress bar -->
@@ -4138,9 +4239,9 @@ function renderPrediction(){
           <div style="width:${Math.max((accountBal/TARGET)*100,0.5).toFixed(1)}%;height:100%;background:${isAhead?'var(--green)':'var(--red)'};border-radius:99px;position:relative;z-index:2;transition:width .8s;"></div>
         </div>
         <div style="display:flex;justify-content:space-between;margin-top:6px;">
-          <span style="font-size:10px;color:${isAhead?'var(--green)':'var(--red)'};">● You: ${fmtC(accountBal)}</span>
-          <span style="font-size:10px;color:var(--gold);">│ Plan: ${fmtC(planNow)}</span>
-          <span style="font-size:10px;color:var(--text3);">${fmtC(TARGET-accountBal)} left</span>
+          <span style="font-size:10px;color:${isAhead?'var(--green)':'var(--red)'};">● You: ${CURR_SYMBOL}${fmtL(accountBal)}</span>
+          <span style="font-size:10px;color:var(--gold);">│ Plan: ${CURR_SYMBOL}${fmtL(planNow)}</span>
+          <span style="font-size:10px;color:var(--text3);">${CURR_SYMBOL}${fmtL(TARGET-accountBal)} left</span>
         </div>
       </div>
     </div>
@@ -4189,7 +4290,7 @@ function renderPrediction(){
               <span>📋 Plan: <b style="color:var(--gold);">${planDate}</b></span>
               ${reached
                 ? `<span>✅ <b style="color:var(--green);">Done!</b></span>`
-                : `<span>You: <b style="color:var(--text2);">${fmtC(accountBal)} / ${fmtC(m.val)}</b></span>`}
+                : `<span>You: <b style="color:var(--text2);">${CURR_SYMBOL}${fmtL(accountBal)} / ${CURR_SYMBOL}${fmtL(m.val)}</b></span>`}
             </div>
           </div>
         </div>`;
@@ -4204,11 +4305,11 @@ function renderPrediction(){
       </div>
       <div style="background:rgba(34,197,94,0.08);border:1px solid #1A4A2A;border-radius:12px;padding:12px;text-align:center;">
         <div style="font-size:9px;color:var(--green);font-weight:600;margin-bottom:5px;">WITHDRAWN</div>
-        <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--green);">${fmtC(totalWithdrawn)}</div>
+        <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--green);">${CURR_SYMBOL}${fmtL(totalWithdrawn)}</div>
       </div>
       <div style="background:rgba(59,130,246,0.08);border:1px solid #1A2A4A;border-radius:12px;padding:12px;text-align:center;">
         <div style="font-size:9px;color:var(--blue);font-weight:600;margin-bottom:5px;">IN ACCOUNT</div>
-        <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--blue);">${fmtC(accountBal)}</div>
+        <div style="font-family:var(--head);font-size:16px;font-weight:700;color:var(--blue);">${CURR_SYMBOL}${fmtL(accountBal)}</div>
       </div>
     </div>
     `}
@@ -4262,30 +4363,6 @@ function renderSettingsScreen(){
     const el=document.getElementById(id);
     if(el){ el.removeEventListener('input',renderSetPreview); el.addEventListener('input',renderSetPreview); }
   });
-  // Render dynamic capital/target quick-pick buttons based on market mode
-  const capBtns = document.getElementById('cap-btns');
-  const tgtBtns = document.getElementById('tgt-btns');
-  if(capBtns){
-    const isIndian = MARKET_MODE === 'indian';
-    const capPicks = isIndian
-      ? [[100000,'₹1L'],[200000,'₹2L'],[500000,'₹5L'],[1000000,'₹10L'],[2500000,'₹25L'],[5000000,'₹50L']]
-      : [[1000,'$1K'],[5000,'$5K'],[10000,'$10K'],[25000,'$25K'],[50000,'$50K'],[100000,'$100K']];
-    capBtns.innerHTML = capPicks.map(([v,l])=>
-      `<button onclick="document.getElementById('set-capital').value='${v}';renderSetPreview()"
-        style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">${l}</button>`
-    ).join('');
-  }
-  if(tgtBtns){
-    const isIndian = MARKET_MODE === 'indian';
-    const tgtPicks = isIndian
-      ? [[1000000,'₹10L'],[2500000,'₹25L'],[5000000,'₹50L'],[10000000,'₹1Cr'],[20000000,'₹2Cr'],[50000000,'₹5Cr']]
-      : [[10000,'$10K'],[25000,'$25K'],[50000,'$50K'],[100000,'$100K'],[250000,'$250K'],[500000,'$500K']];
-    tgtBtns.innerHTML = tgtPicks.map(([v,l])=>
-      `<button onclick="document.getElementById('set-target').value='${v}';renderSetPreview()"
-        style="padding:5px 12px;background:var(--card2);border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--font);">${l}</button>`
-    ).join('');
-  }
-
   // Render market mode section dynamically
   const mms = document.getElementById('market-mode-section');
   if(mms){
@@ -4317,23 +4394,17 @@ function renderSetPreview(){
   const cap = parseFloat(document.getElementById('set-capital')?.value)||INITIAL_CAPITAL;
   const tgt = parseFloat(document.getElementById('set-target')?.value)||TARGET;
   const sc  = SCENARIOS[activeScenario]||SCENARIOS.moderate;
-  const sym = CURR_SYMBOL||'₹';
   const dailyGoal  = cap * sc.dailyTarget;
   const monthGoal  = dailyGoal * TPM;
   const multiplier = (tgt/cap).toFixed(1);
   const el = document.getElementById('set-preview');
   if(!el) return;
-  // Update currency symbol on input boxes
-  const capSym = document.getElementById('cap-sym');
-  const tgtSym = document.getElementById('tgt-sym');
-  if(capSym) capSym.textContent = sym;
-  if(tgtSym) tgtSym.textContent = sym;
   el.innerHTML=`
     <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Preview (${sc.label} plan)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       ${[
-        ['Starting Capital',fmtC(cap),         'var(--gold)'],
-        ['Target',          fmtC(tgt),          'var(--green)'],
+        ['Starting Capital',CURR_SYMBOL+fmtL(cap),         'var(--gold)'],
+        ['Target',          CURR_SYMBOL+fmtL(tgt),          'var(--green)'],
         ['Growth needed',   multiplier+'x',          'var(--blue)'],
         ['Daily goal',      fmtPnl(dailyGoal,true),  'var(--text2)'],
         ['Monthly goal',    fmtPnl(monthGoal,true),  'var(--text2)'],
@@ -4430,6 +4501,137 @@ function clearAllData(){
 // ======================================================
 //  INIT
 // ======================================================
+
+// ======================================================
+//  MANUAL P&L ENTRY
+// ======================================================
+let manualEntrySide = 'profit';
+let manualInstruments = [];
+
+function setManualSide(side){
+  manualEntrySide = side;
+  const pb = document.getElementById('me-side-profit');
+  const lb = document.getElementById('me-side-loss');
+  if(side==='profit'){
+    pb.style.border='1.5px solid var(--green)'; pb.style.background='var(--green-dim)'; pb.style.color='var(--green)';
+    lb.style.border='1.5px solid var(--border2)'; lb.style.background='transparent'; lb.style.color='var(--text3)';
+  } else {
+    lb.style.border='1.5px solid var(--red)'; lb.style.background='var(--red-dim)'; lb.style.color='var(--red)';
+    pb.style.border='1.5px solid var(--border2)'; pb.style.background='transparent'; pb.style.color='var(--text3)';
+  }
+  updateManualEntryPreview();
+}
+
+function addManualInstrument(){
+  const inp = document.getElementById('manual-entry-instrument');
+  if(!inp) return;
+  const val = inp.value.replace(/,/g,'').trim().toUpperCase();
+  if(!val) return;
+  if(!manualInstruments.includes(val)) manualInstruments.push(val);
+  inp.value = '';
+  renderManualInstrumentTags();
+  updateManualEntryPreview();
+}
+
+function removeManualInstrument(sym){
+  manualInstruments = manualInstruments.filter(s=>s!==sym);
+  renderManualInstrumentTags();
+  updateManualEntryPreview();
+}
+
+function renderManualInstrumentTags(){
+  const el = document.getElementById('me-instrument-tags');
+  if(!el) return;
+  el.innerHTML = manualInstruments.map(function(sym){
+    return '<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--card);border:1px solid var(--border2);border-radius:20px;font-size:12px;font-weight:600;color:var(--text2);">'+
+    sym+' <span onclick="manualInstruments=manualInstruments.filter(function(s){return s!==\''+sym+'\';});renderManualInstrumentTags();updateManualEntryPreview();" style="cursor:pointer;color:var(--text3);font-size:14px;line-height:1;">&times;</span></span>';
+  }).join('');
+}
+
+function updateManualEntryPreview(){
+  const el = document.getElementById('me-preview');
+  if(!el) return;
+  const sym    = CURR_SYMBOL||'\u20b9';
+  const pnlRaw = parseFloat(document.getElementById('manual-entry-pnl')?.value)||0;
+  const brok   = parseFloat(document.getElementById('manual-entry-brok')?.value)||0;
+  const date   = document.getElementById('manual-entry-date')?.value || '\u2014';
+  const pnl    = manualEntrySide==='loss' ? -Math.abs(pnlRaw) : Math.abs(pnlRaw);
+  const net    = pnl - brok;
+  if(!pnlRaw){ el.innerHTML='<span style="color:var(--text3);">Fill in date and P&L to see preview</span>'; return; }
+  el.innerHTML =
+    '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Preview</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'+
+    '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:4px;">DATE</div><div style="font-size:12px;font-weight:600;color:var(--text);font-family:var(--mono);">'+date+'</div></div>'+
+    '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:4px;">GROSS P&L</div><div style="font-size:14px;font-weight:700;color:'+(pnl>=0?'var(--green)':'var(--red)')+';">'+(pnl>=0?'+':'')+sym+Math.abs(pnl).toLocaleString()+'</div></div>'+
+    '<div style="text-align:center;"><div style="font-size:9px;color:var(--text3);margin-bottom:4px;">NET P&L</div><div style="font-size:14px;font-weight:700;color:'+(net>=0?'var(--green)':'var(--red)')+';">'+(net>=0?'+':'')+sym+Math.abs(net).toLocaleString()+'</div></div>'+
+    '</div>'+
+    (brok>0?'<div style="font-size:11px;color:var(--red);margin-top:8px;text-align:center;">− '+sym+brok.toLocaleString()+' charges</div>':'')+
+    (manualInstruments.length>0?'<div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center;">'+manualInstruments.join(' · ')+'</div>':'');
+}
+
+function saveManualEntry(){
+  const date   = document.getElementById('manual-entry-date')?.value;
+  const pnlRaw = parseFloat(document.getElementById('manual-entry-pnl')?.value);
+  const brok   = parseFloat(document.getElementById('manual-entry-brok')?.value)||0;
+  const note   = document.getElementById('manual-entry-note')?.value?.trim()||'';
+  const status = document.getElementById('me-status');
+
+  if(!date){ if(status){status.style.color='var(--red)';status.textContent='\u26a0\ufe0f Please select a date';} return; }
+  if(!pnlRaw||isNaN(pnlRaw)){ if(status){status.style.color='var(--red)';status.textContent='\u26a0\ufe0f Please enter a P&L amount';} return; }
+
+  const pnl = manualEntrySide==='loss' ? -Math.abs(pnlRaw) : Math.abs(pnlRaw);
+
+  if(journal[date] && !confirm('A trading day for '+date+' already exists. Overwrite it?')) return;
+
+  const rows = manualInstruments.map(sym=>({sym, buyQty:0, sellQty:0, avgBuy:0, avgSell:0, pnl: pnl/Math.max(manualInstruments.length,1)}));
+
+  journal[date] = {
+    pnl:      Math.round(pnl),
+    brokerage: Math.round(brok),
+    trades:   manualInstruments.length || 1,
+    rawCount: manualInstruments.length || 1,
+    rows,
+    note,
+    manual: true
+  };
+
+  saveJournal();
+  renderTopStats();
+  const [y,m] = date.split('-').map(Number);
+  calYear=y; calMonth=m-1;
+
+  if(status){ status.style.color='var(--green)'; status.textContent='\u2705 Added '+date+' to journal!'; }
+
+  document.getElementById('manual-entry-pnl').value='';
+  document.getElementById('manual-entry-brok').value='';
+  document.getElementById('manual-entry-note').value='';
+  manualInstruments=[];
+  renderManualInstrumentTags();
+  updateManualEntryPreview();
+  renderManualEntryRecent();
+
+  const next = new Date(date); next.setDate(next.getDate()+1);
+  const dateEl = document.getElementById('manual-entry-date');
+  if(dateEl) dateEl.value = next.toISOString().slice(0,10);
+  setTimeout(()=>{ if(status) status.textContent=''; }, 3000);
+}
+
+function renderManualEntryRecent(){
+  const el = document.getElementById('me-recent');
+  if(!el) return;
+  const entries = Object.entries(journal).filter(([,d])=>d.manual).sort(([a],[b])=>b.localeCompare(a)).slice(0,5);
+  if(!entries.length){ el.innerHTML=''; return; }
+  const sym = CURR_SYMBOL||'\u20b9';
+  el.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">\u270f\ufe0f Recent Manual Entries</div>'+
+    entries.map(([date,d])=>{
+      const net = d.pnl-(d.brokerage||0);
+      return '<div style="display:flex;align-items:center;padding:12px 14px;background:var(--card);border:1px solid rgba(139,92,246,0.2);border-radius:12px;margin-bottom:8px;">'+
+        '<div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--text);">'+date+' <span style="font-size:10px;color:#a78bfa;">\u270f\ufe0f manual</span></div>'+
+        '<div style="font-size:11px;color:var(--text3);">'+(d.rows?.map(r=>r.sym).filter(Boolean).join(' \u00b7 ')||'\u2014')+'</div></div>'+
+        '<div style="font-family:var(--head);font-size:16px;font-weight:700;color:'+(net>=0?'var(--green)':'var(--red)')+';">'+(net>=0?'+':'')+sym+Math.abs(net).toLocaleString()+'</div></div>';
+    }).join('');
+}
+
 loadSettings();
 loadJournal();
 loadMarketMode();
