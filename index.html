@@ -40,10 +40,10 @@ body{height:100%;min-height:100vh;min-height:-webkit-fill-available;overflow:hid
 }
 body{font-family:var(--font);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;}
 #app{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;height:100vh;height:100dvh;height:-webkit-fill-available;background:var(--bg);}
-#topbar{flex-shrink:0;background:var(--bg2);border-bottom:1px solid var(--border);padding:calc(14px + var(--sat)) 18px 0;order:1;-webkit-order:1;}
-#content{flex:1;overflow:hidden;position:relative;min-height:0;order:2;-webkit-order:2;}
-#bottomnav{flex-shrink:0;background:var(--bg2);border-top:1px solid var(--border);display:-webkit-flex;display:flex;padding-bottom:max(var(--sab),10px);order:3;-webkit-order:3;}
-.screen{position:absolute;top:0;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;display:none;padding-bottom:90px;}
+#topbar{flex-shrink:0;background:var(--bg2);border-bottom:1px solid var(--border);padding:calc(14px + var(--sat)) 18px 0;}
+#content{flex:1;overflow:hidden;position:relative;min-height:0;}
+#bottomnav{flex-shrink:0;background:var(--bg2);border-top:1px solid var(--border);display:-webkit-flex;display:flex;padding-bottom:max(var(--sab),10px);}
+.screen{position:absolute;top:0;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;display:none;padding-bottom:24px;}
 .screen.active{display:block;}
 .nav-item{flex:1;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;padding:10px 4px 13px;cursor:pointer;border:none;background:transparent;color:var(--text3);font-family:var(--font);gap:5px;transition:color .15s;position:relative;}
 .nav-item .nav-icon{font-size:22px;line-height:1;}
@@ -212,7 +212,7 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
     </button>
 
     <!-- Market switcher - visible on desktop sidebar -->
-    <div id="nav-market-switcher" style="display:none;">
+    <div id="nav-market-switcher" style="display:none;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-top:1px solid var(--border);">
     </div>
 
     <!-- Auth button - visible on desktop sidebar -->
@@ -799,11 +799,11 @@ async function getFirebase(){
   try{
     const {initializeApp, getApps} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
     const {getFirestore, doc, setDoc, getDoc} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    const {getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, signOut:fbSignOut, GoogleAuthProvider} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+    const {getAuth, onAuthStateChanged, signInWithPopup, signOut:fbSignOut, GoogleAuthProvider} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
     _firebaseApp = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
     _db   = getFirestore(_firebaseApp);
     _auth = getAuth(_firebaseApp);
-    window._fbModules = {doc, setDoc, getDoc, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, fbSignOut, GoogleAuthProvider};
+    window._fbModules = {doc, setDoc, getDoc, onAuthStateChanged, signInWithPopup, fbSignOut, GoogleAuthProvider};
     return {db:_db, auth:_auth};
   }catch(e){ console.warn('Firebase load failed',e); return null; }
 }
@@ -811,28 +811,10 @@ async function getFirebase(){
 async function initAuth(){
   const fb = await getFirebase();
   if(!fb) return;
-  const {onAuthStateChanged, getRedirectResult} = window._fbModules;
-  
-  // Handle Google redirect result on page load (for mobile sign-in)
-  try {
-    const result = await getRedirectResult(fb.auth);
-    if(result && result.user) {
-      currentUser = result.user;
-      hideAuthModal();
-      showToast('Signed in as ' + (result.user.displayName || result.user.email) + ' ✓');
-      updateAuthUI();
-      await syncFromCloud();
-    }
-  } catch(e) { 
-    console.warn('redirect result error', e); 
-  }
-  
+  const {onAuthStateChanged} = window._fbModules;
   onAuthStateChanged(fb.auth, async user=>{
     currentUser = user;
     updateAuthUI();
-    // Force update of settings card after a delay (in case screen not rendered yet)
-    setTimeout(function(){ if(typeof refreshSettingsAuth==='function') refreshSettingsAuth(); }, 300);
-    setTimeout(function(){ if(typeof refreshSettingsAuth==='function') refreshSettingsAuth(); }, 1500);
     if(currentUser) await syncFromCloud();
   });
 }
@@ -860,22 +842,15 @@ function updateAuthUI(){
 async function signInWithGoogle(){
   const fb = await getFirebase();
   if(!fb){ showToast('Firebase not loaded'); return; }
-  const {signInWithPopup, signInWithRedirect, GoogleAuthProvider} = window._fbModules;
+  const {signInWithPopup, GoogleAuthProvider} = window._fbModules;
   try{
     const provider = new GoogleAuthProvider();
-    // Use redirect on mobile (popups blocked), popup on desktop
-    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-    if(isMobile){
-      await signInWithRedirect(fb.auth, provider);
-    } else {
-      await signInWithPopup(fb.auth, provider);
-      hideAuthModal();
-      showToast('Signed in with Google ✓');
-    }
+    await signInWithPopup(fb.auth, provider);
+    hideAuthModal();
+    showToast('Signed in with Google ✓');
   }catch(e){
     console.warn('Google sign in error', e);
-    var errEl = document.getElementById('auth-error');
-    if(errEl) errEl.textContent = e.message;
+    document.getElementById('auth-error').textContent = e.message;
   }
 }
 
@@ -1536,7 +1511,7 @@ function handleFile(file) {
         ${skipped>0?`<div style="font-size:10px;color:var(--gold);margin-top:6px;">⚠ ${skipped} day(s) skipped (already existed)</div>`:''}
       </div>`;
 
-    setTimeout(()=>{renderNavMarketSwitcher();showScreen('journal',document.querySelectorAll('.nav-item')[0]);}, 1200);
+    setTimeout(()=>showScreen('journal',document.querySelectorAll('.nav-item')[0]), 1200);
   };
   reader.readAsText(file);
 }
@@ -2190,29 +2165,6 @@ function acceptPolished(date){
 // ======================================================
 let MARKET_MODE = 'indian';
 
-// Render the market switcher in the left nav (desktop)
-function renderNavMarketSwitcher(){
-  var el = document.getElementById('nav-market-switcher');
-  if(!el) return;
-  var markets = [
-    {key:'indian', flag:'🇮🇳', label:'INR'},
-    {key:'usd',    flag:'💵', label:'USD'}
-  ];
-  el.innerHTML = markets.map(function(m){
-    var active = MARKET_MODE === m.key;
-    return '<button onclick="setMarketMode(\''+m.key+'\')" '+
-      'style="background:'+(active?'rgba(245,200,66,0.18)':'transparent')+';'+
-      'border:1px solid '+(active?'var(--gold)':'transparent')+';'+
-      'border-radius:10px;width:64px;padding:8px 4px;cursor:pointer;'+
-      'font-family:var(--font);color:'+(active?'var(--gold)':'var(--text3)')+';'+
-      'display:flex;flex-direction:column;align-items:center;gap:3px;'+
-      'transition:all .15s;-webkit-tap-highlight-color:transparent;">'+
-      '<span style="font-size:18px;line-height:1;">'+m.flag+'</span>'+
-      '<span style="font-size:9px;font-weight:700;letter-spacing:0.5px;">'+m.label+'</span>'+
-      '</button>';
-  }).join('');
-}
-
 // Currency symbols & labels per market
 const MARKET_CONFIG = {
   indian: {
@@ -2228,7 +2180,7 @@ const MARKET_CONFIG = {
 // Dynamic currency symbol — always reads from current mode
 let CURR_SYMBOL = '₹';
 
-function renderMarketSwitcher(){
+function renderMarketSwitcher(){ var sw=document.getElementById("nav-market-switcher"); if(sw)sw.style.display="none"; return;
   var modes = [
     {key:'indian',     cfg:MARKET_CONFIG.indian},
     {key:'forex',      cfg:MARKET_CONFIG.forex},
