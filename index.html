@@ -911,7 +911,7 @@ async function signOut(){
   setTimeout(()=>{ window.location.href = window.location.pathname+'?t='+Date.now(); }, 600);
 }
 
-async function syncToCloud(){
+async function syncToCloud(silent=false){
   if(!currentUser) return;
   const fb = await getFirebase();
   if(!fb) return;
@@ -941,7 +941,7 @@ async function syncToCloud(){
       settings: JSON.stringify(allSettings.indian || {}),
       updatedAt: new Date().toISOString()
     });
-    showToast('☁️ Saved '+MARKET_CONFIG[activeMarketKey()].code+' workspace to cloud');
+    if(!silent) showToast('☁️ Saved '+MARKET_CONFIG[activeMarketKey()].code+' workspace to cloud');
   }catch(e){ console.warn('Sync failed',e.message); }
 }
 
@@ -992,12 +992,13 @@ async function syncFromCloud(){
   }catch(e){ console.warn('Cloud fetch failed',e); showToast('❌ Sync failed: '+e.message); }
 }
 
-function saveJournal(){
+function saveJournal(options){
+  const silent = !!(options && options.silent);
   try{
     localStorage.setItem(marketJournalKey(), JSON.stringify(journal));
     if(activeMarketKey()==='indian') localStorage.setItem(STORAGE_KEY, JSON.stringify(journal));
   }catch(e){}
-  if(currentUser) syncToCloud();
+  if(currentUser) syncToCloud(silent);
 }
 
 
@@ -1629,48 +1630,78 @@ function handleFile(file) {
     if(!parsed){st.innerHTML='<div class="status-box status-err">✗ Could not parse. Use a Fyers Tradebook CSV.</div>';return;}
 
     const dates=Object.keys(parsed.byDate).sort();
-    let imported=0, skipped=0, skippedDates=[];
+    let imported=0, updated=0, updatedDates=[];
 
     for(const date of dates){
-      if(journal[date]){ skipped++; skippedDates.push(date); continue; }
       const trades=parsed.byDate[date];
       const {rows,total}=calcPnL(trades);
       const instruments=new Set(trades.map(t=>t.sym)).size;
-      journal[date]={pnl:Math.round(total), trades:instruments, rows, rawCount:trades.length};
-      imported++;
+      const existing = journal[date] || {};
+      const preserved = {
+        brokerage: existing.brokerage || 0,
+        brokerageBreakdown: existing.brokerageBreakdown,
+        charts: existing.charts,
+        note: existing.note || '',
+        polishedNote: existing.polishedNote || '',
+        highlighted: !!existing.highlighted,
+        special: !!existing.special,
+        noteUpdatedAt: existing.noteUpdatedAt,
+        manualCreatedAt: existing.manualCreatedAt
+      };
+      journal[date]={
+        ...existing,
+        pnl:Math.round(total),
+        trades:instruments,
+        rows,
+        rawCount:trades.length,
+        brokerage: preserved.brokerage,
+        brokerageBreakdown: preserved.brokerageBreakdown,
+        charts: preserved.charts,
+        note: preserved.note,
+        polishedNote: preserved.polishedNote,
+        highlighted: preserved.highlighted,
+        special: preserved.special,
+        noteUpdatedAt: preserved.noteUpdatedAt,
+        manualCreatedAt: preserved.manualCreatedAt,
+        manual: false,
+        csvImportedAt: new Date().toISOString()
+      };
+      if(existing && Object.keys(existing).length){ updated++; updatedDates.push(date); }
+      else imported++;
     }
 
     saveJournal();
     renderTopStats(); renderRecent();
 
     // Navigate to first imported month
-    if(imported>0){
-      const firstNew=dates.find(d=>!skippedDates.includes(d));
-      if(firstNew){ const[y,m]=firstNew.split('-').map(Number); calYear=y; calMonth=m-1; }
+    if(dates.length>0){
+      const firstChanged=dates[0];
+      if(firstChanged){ const[y,m]=firstChanged.split('-').map(Number); calYear=y; calMonth=m-1; }
     }
 
     // Show summary
     const brokerName = parsed.broker || 'Unknown';
     const totalDays=dates.length;
     const modeNote = uploadImportMode==='single' && totalDays>1 ? '<div style="font-size:10px;color:var(--gold);margin-top:6px;">ℹ Multiple days detected, imported all days. Use Full Year next time for yearly CSV.</div>' : (uploadImportMode==='year' ? '<div style="font-size:10px;color:var(--blue);margin-top:6px;">📆 Full Year mode selected.</div>' : '');
-    const totalPnl=dates.filter(d=>!skippedDates.includes(d)).reduce((s,d)=>s+(journal[d]?.pnl||0),0);
-    const winDays=dates.filter(d=>!skippedDates.includes(d)&&(journal[d]?.pnl||0)>0).length;
+    const totalPnl=dates.reduce((s,d)=>s+(journal[d]?.pnl||0),0);
+    const winDays=dates.filter(d=>(journal[d]?.pnl||0)>0).length;
+    const changedDays = imported + updated;
 
-    if(imported===0){
-      st.innerHTML=`<div class="status-box status-dup">⚠ All ${skipped} day(s) already exist in journal. Nothing new imported.</div>`; return;
+    if(changedDays===0){
+      st.innerHTML=`<div class="status-box status-dup">⚠ No valid trading days found in this CSV.</div>`; return;
     }
 
     st.innerHTML=`
       <div class="status-box status-ok" style="padding:14px 16px;">
-        <div style="font-size:13px;font-weight:700;margin-bottom:4px;">✓ Imported successfully!</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px;">✓ CSV processed successfully! ${imported} new · ${updated} updated</div>
         <div style="font-size:11px;color:var(--green);opacity:0.8;margin-bottom:10px;">Broker detected: <b>${brokerName}</b></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
           <div style="background:var(--green-dim);border:1px solid #163325;border-radius:8px;padding:8px;text-align:center;">
             <div style="font-family:var(--head);font-size:20px;color:var(--green);">${imported}</div>
-            <div style="font-size:8px;color:#4ade8088;letter-spacing:1px;">DAYS IMPORTED</div>
+            <div style="font-size:8px;color:#4ade8088;letter-spacing:1px;">NEW DAYS</div>
           </div>
           <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center;">
-            <div style="font-family:var(--head);font-size:20px;color:var(--gold);">${winDays}/${imported}</div>
+            <div style="font-family:var(--head);font-size:20px;color:var(--gold);">${winDays}/${changedDays}</div>
             <div style="font-size:8px;color:#e8c84a88;letter-spacing:1px;">WIN DAYS</div>
           </div>
           <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center;">
@@ -1678,13 +1709,12 @@ function handleFile(file) {
             <div style="font-size:8px;color:#88888866;letter-spacing:1px;">NET P&L</div>
           </div>
           <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center;">
-            <div style="font-family:var(--head);font-size:20px;color:#8888aa;">${Math.round(winDays/imported*100)}%</div>
+            <div style="font-family:var(--head);font-size:20px;color:#8888aa;">${Math.round(winDays/Math.max(changedDays,1)*100)}%</div>
             <div style="font-size:8px;color:#88888866;letter-spacing:1px;">WIN RATE</div>
           </div>
         </div>
         ${parsed.dateRange?`<div style="font-size:10px;color:#4ade8088;">📅 ${parsed.dateRange.from} → ${parsed.dateRange.to}</div>`:''}
-        ${skipped>0?`<div style="font-size:10px;color:var(--gold);margin-top:6px;">⚠ ${skipped} day(s) skipped (already existed)</div>`:''}
-        ${modeNote}
+        ${updated>0?`<div style="font-size:10px;color:var(--gold);margin-top:6px;">🔄 Updated ${updated} existing/manual day(s) from CSV and kept notes, charts and charges.</div>`:""}${modeNote}
       </div>`;
 
     setTimeout(()=>showScreen('journal',document.querySelectorAll('.nav-item')[0]), 1200);
@@ -1850,11 +1880,35 @@ function saveNote(date) {
   const ta = document.getElementById('day-note');
   if(!ta) return;
   journal[date].note = ta.value;
+  journal[date].noteUpdatedAt = new Date().toISOString();
   saveJournal();
   // Show saved flash
   const btn = document.getElementById('note-save-btn');
   if(btn){ btn.textContent='✓ Saved'; btn.style.background='var(--green)'; btn.style.color='#0A0A12'; }
+  const status = document.getElementById('note-autosave-status');
+  if(status) status.textContent='Saved ✓';
   setTimeout(()=>{ if(btn){ btn.textContent='Save Note'; btn.style.background='var(--card2)'; btn.style.color='var(--text2)'; }},1400);
+}
+
+let noteAutosaveTimer = null;
+function autoSaveNote(date){
+  if(!journal[date]) return;
+  const ta = document.getElementById('day-note');
+  if(!ta) return;
+  journal[date].note = ta.value;
+  const cc = document.getElementById('note-char');
+  if(cc) cc.textContent = ta.value.length + ' chars';
+  const status = document.getElementById('note-autosave-status');
+  if(status) status.textContent = 'Saving...';
+  clearTimeout(noteAutosaveTimer);
+  noteAutosaveTimer = setTimeout(()=>{
+    if(!journal[date]) return;
+    const currentTa = document.getElementById('day-note');
+    journal[date].note = currentTa ? currentTa.value : journal[date].note;
+    journal[date].noteUpdatedAt = new Date().toISOString();
+    saveJournal({silent:true});
+    if(status) status.textContent = 'Auto-saved ✓';
+  }, 650);
 }
 
 // Inline chart input row helper
@@ -2082,7 +2136,7 @@ function renderDayDetail(){
             id="day-note"
             placeholder="Write rough notes here… e.g: nifty broke 24000, took ce at 150, sl hit at 120, missed banknifty setup, revenge trade on sensex lost 5k, need to wait more"
             style="width:100%;min-height:110px;background:transparent;border:none;outline:none;font-size:13px;color:var(--text);font-family:var(--font);line-height:1.7;resize:vertical;"
-            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';"
+            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';autoSaveNote('${selectedDate}')"
           >${note}</textarea>
 
           <!-- AI Polish section -->
@@ -2104,7 +2158,7 @@ function renderDayDetail(){
           </div>
 
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:10px;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap;">
-            <span style="font-size:11px;color:var(--text3);" id="note-char">${note.length} chars</span>
+            <span style="font-size:11px;color:var(--text3);" id="note-char">${note.length} chars</span><span style="font-size:11px;color:var(--green);min-width:90px;" id="note-autosave-status"></span>
             <div style="display:flex;gap:6px;">
               <button id="polish-btn-${selectedDate}" onclick="polishNote('${selectedDate}')"
                 style="padding:8px 14px;background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(99,102,241,0.15));border:1px solid rgba(139,92,246,0.35);border-radius:8px;font-size:11px;font-weight:700;color:#a78bfa;cursor:pointer;font-family:var(--font);">
