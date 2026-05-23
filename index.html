@@ -67,7 +67,7 @@ body{font-family:var(--font);color:var(--text);background:var(--bg);-webkit-font
 .cal-cell.profit{background:#071A0E;border-color:#1A4A2A;}
 .cal-cell.loss{background:#1A0707;border-color:#4A1A1A;}
 .cal-cell.empty-day{background:var(--card);}
-.cal-cell.weekend{opacity:.2;pointer-events:none;}
+.cal-cell.weekend{opacity:.35;}
 .cal-cell.selected{border-color:var(--gold)!important;box-shadow:0 0 0 1px rgba(245,200,66,0.27);}
 .cal-day-num{font-size:11px;font-weight:600;line-height:1;margin-bottom:2px;}
 .cal-pnl{font-size:8px;font-weight:700;line-height:1;}
@@ -740,6 +740,18 @@ input,textarea,select{-webkit-appearance:none;appearance:none;font-family:var(--
 
 </div><!-- /app -->
 
+<!-- ══ CONFIRM MODAL (used for deleting a single date and clearing data) ══ -->
+<div id="confirm-modal">
+  <div id="confirm-box">
+    <div id="confirm-msg" style="font-family:var(--head);font-size:18px;font-weight:800;color:var(--text);margin-bottom:8px;">Confirm action?</div>
+    <div id="confirm-sub" style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:20px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button id="confirm-cancel" type="button" class="btn-ghost" style="min-height:42px;">Cancel</button>
+      <button id="confirm-ok" type="button" style="background:var(--red);color:#fff;border:none;border-radius:10px;padding:11px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:var(--font);">Delete</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ AUTH MODAL ══ -->
 <div id="auth-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:22px;padding:32px 24px;max-width:320px;width:92%;box-shadow:0 24px 48px rgba(0,0,0,0.5);">
@@ -1093,37 +1105,11 @@ function isFirstLaunch(){
   return !localStorage.getItem(marketSettingsKey());
 }
 
-// -- Day helpers --
-function isTradeDay(d){
-  if(!d) return false;
-  if(d.noTrade || d.noteOnly) return false;
-  return (d.rawCount||0)>0 || (d.trades||0)>0 || (Array.isArray(d.rows) && d.rows.length>0) || (typeof d.pnl === 'number' && d.manual);
-}
-function ensureJournalDay(date){
-  if(!date) return null;
-  if(!journal[date]){
-    journal[date] = {
-      pnl:0, brokerage:0, trades:0, rawCount:0, rows:[], charts:{}, note:'',
-      noteOnly:true, noTrade:true, createdAt:new Date().toISOString()
-    };
-  } else {
-    if(!journal[date].charts) journal[date].charts = {};
-    if(!Array.isArray(journal[date].rows)) journal[date].rows = [];
-  }
-  return journal[date];
-}
-function hasDayContent(d){
-  if(!d) return false;
-  const charts = d.charts || {};
-  return isTradeDay(d) || !!(d.note && d.note.trim()) || Object.values(charts).some(Boolean) || !!d.special || !!d.highlighted || !!d.polishedNote;
-}
-function tradeEntries(){ return Object.entries(journal).filter(([,d])=>isTradeDay(d)); }
-function tradeValues(){ return tradeEntries().map(([,d])=>d); }
 
 // -- Net P&L helper — always deducts brokerage --
-const netOf = (d) => (Number(d?.pnl)||0) - (Number(d?.brokerage)||0);
-const netAll = () => tradeValues().reduce((s,d)=>s+netOf(d),0);
-const brokAll = () => tradeValues().reduce((s,d)=>s+(d.brokerage||0),0);
+const netOf = (d) => (d.pnl||0) - (d.brokerage||0);
+const netAll = () => Object.values(journal).reduce((s,d)=>s+netOf(d),0);
+const brokAll = () => Object.values(journal).reduce((s,d)=>s+(d.brokerage||0),0);
 
 // -- Indian Financial Year: Apr 1 – Mar 31 --
 function getFYRange(){
@@ -1139,7 +1125,7 @@ function inFY(dateStr){
 // -- Actual account balance = start + only reinvested profits (70%)
 //    Withdrawn money (30%) is taken OUT so not in account
 function calcAccountBalance(){
-  const entries = tradeEntries().sort(([a],[b])=>a.localeCompare(b));
+  const entries = Object.entries(journal).sort(([a],[b])=>a.localeCompare(b));
   let cap = INITIAL_CAPITAL;
   // Group by month, apply 70/30 split monthly
   const byMonth = {};
@@ -1162,7 +1148,7 @@ function calcAccountBalance(){
 // Total withdrawn = sum of 30% of all profitable months
 function calcTotalWithdrawn(){
   const byMonth = {};
-  tradeEntries().forEach(([date,d])=>{
+  Object.entries(journal).forEach(([date,d])=>{
     const key = date.slice(0,7);
     if(!byMonth[key]) byMonth[key] = 0;
     byMonth[key] += netOf(d);
@@ -1655,81 +1641,86 @@ function handleFile(file) {
     if(!parsed){st.innerHTML='<div class="status-box status-err">✗ Could not parse. Use a Fyers Tradebook CSV.</div>';return;}
 
     const dates=Object.keys(parsed.byDate).sort();
-    let imported=0, updated=0, preserved=0;
+    let imported=0, updated=0;
+    const importedDates=[];
 
     for(const date of dates){
       const trades=parsed.byDate[date];
       const {rows,total}=calcPnL(trades);
       const instruments=new Set(trades.map(t=>t.sym)).size;
-      const old=journal[date]||{};
-      const hadExisting = !!journal[date];
-      if(hadExisting && (old.note || Object.values(old.charts||{}).some(Boolean))) preserved++;
+      const oldDay = journal[date] || {};
+      const hadRealData = Number(oldDay.rawCount||0)>0 || Number(oldDay.trades||0)>0 || oldDay.source==='csv';
 
       journal[date]={
-        ...old,
+        ...oldDay,
         pnl:Math.round(total),
         trades:instruments,
         rows,
         rawCount:trades.length,
-        brokerage: old.brokerage || 0,
-        brokerageBreakdown: old.brokerageBreakdown,
-        charts: old.charts || {},
-        note: old.note || '',
-        highlighted: old.highlighted || false,
-        special: old.special || false,
-        polishedNote: old.polishedNote || '',
-        noteUpdatedAt: old.noteUpdatedAt,
         manual:false,
-        csvImported:true,
-        noteOnly:false,
-        noTrade:false,
-        updatedAt:new Date().toISOString()
+        planned:false,
+        source:'csv',
+        importedAt:new Date().toISOString(),
+        // keep user-entered information from plan/manual day
+        note: oldDay.note || '',
+        charts: oldDay.charts || {},
+        brokerage: Number(oldDay.brokerage || 0),
+        brokerageBreakdown: oldDay.brokerageBreakdown || {},
+        special: !!oldDay.special,
+        highlighted: !!oldDay.highlighted,
+        polishedNote: oldDay.polishedNote || ''
       };
-      if(hadExisting) updated++; else imported++;
+      if(hadRealData) updated++; else imported++;
+      importedDates.push(date);
     }
 
     saveJournal();
     renderTopStats(); renderRecent();
 
-    const firstDate=dates[0];
-    if(firstDate){ const[y,m]=firstDate.split('-').map(Number); calYear=y; calMonth=m-1; }
-    if(selectedDate && dates.includes(selectedDate)) renderDayDetail();
+    // Navigate to first imported month
+    if(importedDates.length>0){
+      const firstNew=importedDates[0];
+      if(firstNew){ const[y,m]=firstNew.split('-').map(Number); calYear=y; calMonth=m-1; }
+    }
 
     // Show summary
     const brokerName = parsed.broker || 'Unknown';
     const totalDays=dates.length;
     const modeNote = uploadImportMode==='single' && totalDays>1 ? '<div style="font-size:10px;color:var(--gold);margin-top:6px;">ℹ Multiple days detected, imported all days. Use Full Year next time for yearly CSV.</div>' : (uploadImportMode==='year' ? '<div style="font-size:10px;color:var(--blue);margin-top:6px;">📆 Full Year mode selected.</div>' : '');
-    const totalPnl=dates.reduce((sum,d)=>sum+netOf(journal[d]),0);
-    const winDays=dates.filter(d=>netOf(journal[d])>0).length;
+    const totalPnl=importedDates.reduce((s,d)=>s+(journal[d]?.pnl||0),0);
+    const winDays=importedDates.filter(d=>(journal[d]?.pnl||0)>0).length;
+
+    if(imported===0 && updated===0){
+      st.innerHTML=`<div class="status-box status-dup">⚠ No trade days found in this CSV.</div>`; return;
+    }
 
     st.innerHTML=`
       <div class="status-box status-ok" style="padding:14px 16px;">
-        <div style="font-size:13px;font-weight:700;margin-bottom:4px;">✓ CSV updated journal successfully!</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px;">✓ Imported successfully!</div>
         <div style="font-size:11px;color:var(--green);opacity:0.8;margin-bottom:10px;">Broker detected: <b>${brokerName}</b></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
           <div style="background:var(--green-dim);border:1px solid #163325;border-radius:8px;padding:8px;text-align:center;">
             <div style="font-family:var(--head);font-size:20px;color:var(--green);">${imported}</div>
-            <div style="font-size:8px;color:#4ade8088;letter-spacing:1px;">NEW DAYS</div>
+            <div style="font-size:8px;color:#4ade8088;letter-spacing:1px;">DAYS IMPORTED</div>
           </div>
-          <div style="background:var(--gold-dim);border:1px solid rgba(245,200,66,0.25);border-radius:8px;padding:8px;text-align:center;">
-            <div style="font-family:var(--head);font-size:20px;color:var(--gold);">${updated}</div>
-            <div style="font-size:8px;color:#e8c84a88;letter-spacing:1px;">UPDATED DAYS</div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-family:var(--head);font-size:20px;color:var(--gold);">${winDays}/${imported}</div>
+            <div style="font-size:8px;color:#e8c84a88;letter-spacing:1px;">WIN DAYS</div>
           </div>
           <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center;">
             <div style="font-family:var(--head);font-size:20px;color:${totalPnl>=0?'var(--green)':'var(--red)'};">${fmtPnl(totalPnl,true)}</div>
             <div style="font-size:8px;color:#88888866;letter-spacing:1px;">NET P&L</div>
           </div>
           <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center;">
-            <div style="font-family:var(--head);font-size:20px;color:#8888aa;">${totalDays?Math.round(winDays/totalDays*100):0}%</div>
+            <div style="font-family:var(--head);font-size:20px;color:#8888aa;">${Math.round(winDays/imported*100)}%</div>
             <div style="font-size:8px;color:#88888866;letter-spacing:1px;">WIN RATE</div>
           </div>
         </div>
         ${parsed.dateRange?`<div style="font-size:10px;color:#4ade8088;">📅 ${parsed.dateRange.from} → ${parsed.dateRange.to}</div>`:''}
-        ${preserved>0?`<div style="font-size:10px;color:var(--gold);margin-top:6px;">🔒 Kept notes, chart URLs, highlights and charges for ${preserved} existing day(s).</div>`:''}
+        ${skipped>0?`<div style="font-size:10px;color:var(--gold);margin-top:6px;">⚠ ${skipped} day(s) skipped (already existed)</div>`:''}
         ${modeNote}
       </div>`;
 
-    renderCalendar();
     setTimeout(()=>showScreen('journal',document.querySelectorAll('.nav-item')[0]), 1200);
   };
   reader.readAsText(file);
@@ -1771,7 +1762,7 @@ function isWeekend(y,m,d){const wd=new Date(y,m,d).getDay();return wd===0||wd===
 //  TOP STATS
 // ======================================================
 function renderTopStats(){
-  const days=tradeValues();
+  const days=Object.values(journal);
   const net=days.reduce((s,d)=>s+netOf(d),0);
   const winRate=days.length?Math.round(days.filter(d=>netOf(d)>0).length/days.length*100):0;
   document.getElementById('top-stats').innerHTML=`
@@ -1792,10 +1783,10 @@ function renderCalendar(){
   document.getElementById('cal-month-label').textContent=monthNames[calMonth]+' '+calYear;
 
   // Month stats
-  const monthEntries=Object.entries(journal).filter(([k,d])=>{const[y,m]=k.split('-').map(Number);return y===calYear&&m===calMonth+1&&isTradeDay(d);});
-  const mPnl=monthEntries.reduce((s,[,v])=>s+netOf(v),0);
-  const mW=monthEntries.filter(([,v])=>netOf(v)>0).length;
-  const mL=monthEntries.filter(([,v])=>netOf(v)<0).length;
+  const monthEntries=Object.entries(journal).filter(([k])=>{const[y,m]=k.split('-').map(Number);return y===calYear&&m===calMonth+1;});
+  const mPnl=monthEntries.reduce((s,[,v])=>s+v.pnl,0);
+  const mW=monthEntries.filter(([,v])=>v.pnl>0).length;
+  const mL=monthEntries.filter(([,v])=>v.pnl<0).length;
   document.getElementById('cal-month-stats').innerHTML=
     `<span style="color:${mPnl>=0?'var(--green)':'var(--red)'};">${fmtPnl(mPnl,true)}</span> &nbsp;·&nbsp; ${mW}W ${mL}L`;
 
@@ -1814,16 +1805,15 @@ function renderCalendar(){
     const isSel=selectedDate===key;
     let cls='cal-cell';
     if(wknd)cls+=' weekend';
-    else if(!data || !isTradeDay(data)) cls+=' empty-day';
-    else cls+=netOf(data)>=0?' profit':' loss';
+    else if(!data)cls+=' empty-day';
+    else if(isPlanOnlyDay(data)) cls+=' empty-day';
+    else cls+=(Number(data.pnl||0)>=0?' profit':' loss');
     if(isSel)cls+=' selected';
-    const click=wknd?'':`data-date="${key}"`;
-    const hasCharts = data && Object.values(data.charts||{}).some(Boolean);
-    const icons = data ? [hasCharts?'📊':'',data.note?'📝':''].filter(Boolean).join('') : '';
+    const click=`data-date="${key}"`; // allow selecting weekends/non-trading days too
     html+=`<div class="${cls}" ${click}>
       <div class="cal-day-num" style="color:${isSel?'var(--gold)':data?'var(--text2)':'var(--text3)'};">${d}</div>
-      ${data&&isTradeDay(data)?`<div class="cal-pnl" style="color:${netOf(data)>=0?'var(--green)':'var(--red)'};">${fmtPnl(netOf(data),true)}</div>
-      <div class="cal-inst">${icons||''}${data.trades}I</div>`:(data&&hasDayContent(data)?`<div class="cal-pnl" style="color:var(--gold);font-size:9px;">PLAN</div><div class="cal-inst">${icons}</div>`:'')}
+      ${data?`<div class="cal-pnl" style="color:${isPlanOnlyDay(data)?'var(--gold)':(Number(data.pnl||0)>=0?'var(--green)':'var(--red)')};">${isPlanOnlyDay(data)?'PLAN':fmtPnl(Number(data.pnl||0),true)}</div>
+      <div class="cal-inst">${[data.charts?.nifty||data.charts?.sensex||data.charts?.banknifty?'📊':'',data.note?'📝':''].filter(Boolean).join('')||''}${isPlanOnlyDay(data)?'':(Number(data.trades||0)+'I')}</div>`:''}
     </div>`;
   }
   document.getElementById('cal-grid').innerHTML=html;
@@ -1832,18 +1822,48 @@ function renderCalendar(){
   renderAllDays();
 }
 
-function selectDay(key){
-  if(selectedDate===key){
-    selectedDate=null;
+
+function ensureJournalDay(date){
+  if(!date) return null;
+  if(!journal[date]){
+    journal[date]={
+      pnl:0,
+      brokerage:0,
+      trades:0,
+      rawCount:0,
+      rows:[],
+      note:'',
+      charts:{},
+      manual:true,
+      planned:true,
+      source:'plan-day',
+      createdAt:new Date().toISOString()
+    };
+    saveJournal(true);
   } else {
-    selectedDate=key;
-    ensureJournalDay(key);
+    journal[date].pnl = Number(journal[date].pnl || 0);
+    journal[date].brokerage = Number(journal[date].brokerage || 0);
+    journal[date].trades = Number(journal[date].trades || 0);
+    journal[date].rawCount = Number(journal[date].rawCount || 0);
+    journal[date].rows = journal[date].rows || [];
+    journal[date].charts = journal[date].charts || {};
   }
+  return journal[date];
+}
+
+function isPlanOnlyDay(d){
+  if(!d) return false;
+  return !!d.planned && Number(d.trades||0)===0 && Number(d.rawCount||0)===0 && Number(d.pnl||0)===0;
+}
+
+function selectDay(key){
+  if(selectedDate===key){ selectedDate=null; renderCalendar(); return; }
+  selectedDate=key;
+  ensureJournalDay(key); // allow note/chart URL before P&L upload
   renderCalendar();
 }
 
 function saveBrokerage(date) {
-  ensureJournalDay(date);
   if(!journal[date]) return;
   const inp = document.getElementById('brokerage-input');
   if(!inp) return;
@@ -1859,37 +1879,42 @@ function saveCharts(date, silent=false) {
   ensureJournalDay(date);
   if(!journal[date]) return;
   const old = journal[date].charts || {};
-  const chartVal = (id, key) => {
-    const el = document.getElementById(id);
-    // If the input is visible in the current market screen, save exactly what the user typed/pasted.
-    // If the input is not rendered (example: USD chart fields while in INR mode), keep the old value.
-    return el ? (el.value || '').trim() : (old[key] || '');
-  };
   journal[date].charts = {
-    nifty:      chartVal('chart-nifty', 'nifty'),
-    niftyCe:    chartVal('chart-nifty-ce', 'niftyCe'),
-    niftyPe:    chartVal('chart-nifty-pe', 'niftyPe'),
-    sensex:     chartVal('chart-sensex', 'sensex'),
-    sensexCe:   chartVal('chart-sensex-ce', 'sensexCe'),
-    sensexPe:   chartVal('chart-sensex-pe', 'sensexPe'),
-    banknifty:  chartVal('chart-banknifty', 'banknifty'),
-    giftNifty:  chartVal('chart-giftnifty', 'giftNifty'),
-    btc:        chartVal('chart-btc', 'btc'),
-    gold:       chartVal('chart-gold', 'gold'),
-    eurusd:     chartVal('chart-eurusd', 'eurusd'),
-    gbpusd:     chartVal('chart-gbpusd', 'gbpusd'),
-    nas100:     chartVal('chart-nas100', 'nas100'),
-    us30:       chartVal('chart-us30', 'us30'),
-    eth:        chartVal('chart-eth', 'eth'),
-    custom:     chartVal('chart-custom', 'custom'),
+    nifty:      (document.getElementById('chart-nifty')       ||{}).value?.trim() || old.nifty      || '',
+    niftyCe:    (document.getElementById('chart-nifty-ce')    ||{}).value?.trim() || old.niftyCe    || '',
+    niftyPe:    (document.getElementById('chart-nifty-pe')    ||{}).value?.trim() || old.niftyPe    || '',
+    sensex:     (document.getElementById('chart-sensex')      ||{}).value?.trim() || old.sensex     || '',
+    sensexCe:   (document.getElementById('chart-sensex-ce')   ||{}).value?.trim() || old.sensexCe   || '',
+    sensexPe:   (document.getElementById('chart-sensex-pe')   ||{}).value?.trim() || old.sensexPe   || '',
+    banknifty:  (document.getElementById('chart-banknifty')   ||{}).value?.trim() || old.banknifty  || '',
+    giftNifty:  (document.getElementById('chart-giftnifty')   ||{}).value?.trim() || old.giftNifty  || '',
+    btc:        (document.getElementById('chart-btc')         ||{}).value?.trim() || old.btc        || '',
+    gold:       (document.getElementById('chart-gold')        ||{}).value?.trim() || old.gold       || '',
+    eurusd:     (document.getElementById('chart-eurusd')      ||{}).value?.trim() || old.eurusd     || '',
+    gbpusd:     (document.getElementById('chart-gbpusd')      ||{}).value?.trim() || old.gbpusd     || '',
+    nas100:     (document.getElementById('chart-nas100')      ||{}).value?.trim() || old.nas100     || '',
+    us30:       (document.getElementById('chart-us30')        ||{}).value?.trim() || old.us30       || '',
+    eth:        (document.getElementById('chart-eth')         ||{}).value?.trim() || old.eth        || '',
+    custom:     (document.getElementById('chart-custom')      ||{}).value?.trim() || old.custom     || '',
   };
-  journal[date].chartsUpdatedAt = new Date().toISOString();
-  saveJournal(); if(!silent){ showToast('📊 Charts saved!'); renderDayDetail(); renderCalendar(); }
+  saveJournal(true);
+  const st = document.getElementById('chart-autosave-status');
+  if(st){ st.textContent = silent ? 'URL auto-saved ✓' : 'Charts saved ✓'; st.style.color='var(--green)'; }
+  if(!silent) showToast('📊 Charts saved!');
+  if(!silent) renderDayDetail();
+}
+
+const chartSaveTimers = {};
+function autoSaveChartInput(date, id){
+  ensureJournalDay(date);
+  const st = document.getElementById('chart-autosave-status');
+  if(st){ st.textContent='Saving URL…'; st.style.color='var(--text3)'; }
+  clearTimeout(chartSaveTimers[id]);
+  chartSaveTimers[id]=setTimeout(()=>saveCharts(date,true),350);
 }
 
 
 function toggleSpecialDay(date){
-  ensureJournalDay(date);
   if(!journal[date]) return;
   journal[date].special = !journal[date].special;
   saveJournal();
@@ -1898,7 +1923,6 @@ function toggleSpecialDay(date){
 }
 
 function highlightNote(date){
-  ensureJournalDay(date);
   if(!journal[date]) return;
   journal[date].highlighted = !journal[date].highlighted;
   saveJournal();
@@ -1906,63 +1930,28 @@ function highlightNote(date){
   renderDayDetail();
 }
 
-function saveNote(date) {
+function saveNote(date, silent=false) {
   ensureJournalDay(date);
   if(!journal[date]) return;
   const ta = document.getElementById('day-note');
   if(!ta) return;
   journal[date].note = ta.value;
-  journal[date].noteUpdatedAt = new Date().toISOString();
-  saveJournal();
+  saveJournal(true);
+  const st = document.getElementById('note-autosave-status');
+  if(st){ st.textContent = silent ? 'Note auto-saved ✓' : 'Note saved ✓'; st.style.color='var(--green)'; }
   // Show saved flash
   const btn = document.getElementById('note-save-btn');
-  if(btn){ btn.textContent='✓ Saved'; btn.style.background='var(--green)'; btn.style.color='#0A0A12'; }
-  setTimeout(()=>{ if(btn){ btn.textContent='Save Note'; btn.style.background='var(--card2)'; btn.style.color='var(--text2)'; }},1400);
+  if(btn && !silent){ btn.textContent='✓ Saved'; btn.style.background='var(--green)'; btn.style.color='#0A0A12'; }
+  setTimeout(()=>{ if(btn && !silent){ btn.textContent='Save Note'; btn.style.background='var(--card2)'; btn.style.color='var(--text2)'; }},1400);
 }
 
-
-let noteAutosaveTimer = null;
-let chartAutosaveTimer = null;
-function handleNoteTyping(date){
+let noteSaveTimer=null;
+function autoSaveNote(date){
   ensureJournalDay(date);
-  const ta = document.getElementById('day-note');
-  const cc = document.getElementById('note-char');
-  const status = document.getElementById('note-autosave-status');
-  if(!ta || !journal[date]) return;
-  journal[date].note = ta.value;
-  if(cc) cc.textContent = ta.value.length + ' chars';
-  if(status) status.textContent = 'Saving...';
-  clearTimeout(noteAutosaveTimer);
-  noteAutosaveTimer = setTimeout(()=>{
-    const currentTa = document.getElementById('day-note');
-    if(currentTa) journal[date].note = currentTa.value;
-    journal[date].noteUpdatedAt = new Date().toISOString();
-    saveJournal();
-    if(status) status.textContent = 'Auto-saved ✓';
-  }, 600);
-}
-function handleChartTyping(date){
-  ensureJournalDay(date);
-  const status = document.getElementById('chart-autosave-status');
-  if(status) status.textContent = 'Saving...';
-  clearTimeout(chartAutosaveTimer);
-  chartAutosaveTimer = setTimeout(()=>{
-    saveCharts(date, true);
-    if(status) status.textContent = 'Auto-saved ✓';
-    renderCalendar();
-  }, 500);
-}
-function handleChartPaste(date){
-  ensureJournalDay(date);
-  const status = document.getElementById('chart-autosave-status');
-  if(status) status.textContent = 'Pasted — saving...';
-  clearTimeout(chartAutosaveTimer);
-  // Let the browser place the pasted URL into the input first, then save immediately.
-  setTimeout(()=>{
-    saveCharts(date, true);
-    if(status) status.textContent = 'URL auto-saved ✓';
-    renderCalendar();
-  }, 50);
+  const st = document.getElementById('note-autosave-status');
+  if(st){ st.textContent='Saving note…'; st.style.color='var(--text3)'; }
+  clearTimeout(noteSaveTimer);
+  noteSaveTimer=setTimeout(()=>saveNote(date,true),500);
 }
 
 // Inline chart input row helper
@@ -1986,61 +1975,60 @@ function chartRow(id, label, emoji, color, val, date) {
         <input id="${id}" type="url" placeholder="Paste new URL to replace…"
           style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:9px 13px;font-size:11px;color:var(--text);font-family:var(--mono);outline:none;"
           onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='var(--border2)'"
-          oninput="handleChartTyping('${date}')" onpaste="handleChartPaste('${date}')" onkeydown="if(event.key==='Enter')saveCharts('${date}')" value="${val}"/>
+          oninput="autoSaveChartInput('${date}','${id}')" onpaste="setTimeout(()=>autoSaveChartInput('${date}','${id}'),50)" onkeydown="if(event.key==='Enter')saveCharts('${date}')" value="${val}"/>
       ` : `
         <input id="${id}" type="url" placeholder="Paste TradingView URL for ${label}…"
           style="width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:10px 13px;font-size:12px;color:var(--text);font-family:var(--mono);outline:none;"
           onfocus="this.style.borderColor='${color}'" onblur="this.style.borderColor='var(--border2)'"
-          oninput="handleChartTyping('${date}')" onpaste="handleChartPaste('${date}')" onkeydown="if(event.key==='Enter')saveCharts('${date}')"/>
+          oninput="autoSaveChartInput('${date}','${id}')" onpaste="setTimeout(()=>autoSaveChartInput('${date}','${id}'),50)" onkeydown="if(event.key==='Enter')saveCharts('${date}')"/>
       `}
     </div>`;
 }
 
 function renderDayDetail(){
   const el=document.getElementById('day-detail');
-  if(!selectedDate){el.style.display='none';return;}
-  ensureJournalDay(selectedDate);
-  if(!journal[selectedDate]){el.style.display='none';return;}
+  if(!selectedDate||!journal[selectedDate]){el.style.display='none';return;}
   el.style.display='block';
-  const d = journal[selectedDate];
+  const d = ensureJournalDay(selectedDate);
   const charts    = d.charts    || {};
   const note      = d.note      || '';
-  const brokerage = d.brokerage || 0;
-  const hasTrade  = isTradeDay(d);
-  const netPnl    = hasTrade ? netOf(d) : 0;
+  const pnl       = Number(d.pnl || 0);
+  const trades    = Number(d.trades || 0);
+  const rawCount  = Number(d.rawCount || 0);
+  const brokerage = Number(d.brokerage || 0);
+  const netPnl    = pnl - brokerage;
   const hasBrok   = brokerage > 0;
+  const planOnly  = isPlanOnlyDay(d);
 
   el.innerHTML=`
-    <div style="background:var(--card);border:1px solid ${netPnl>=0?'#1A4A2A':'#4A1A1A'};border-radius:16px;padding:18px;">
+    <div style="background:var(--card);border:1px solid ${planOnly?'var(--border2)':(netPnl>=0?'#1A4A2A':'#4A1A1A')};border-radius:16px;padding:18px;">
 
       <!-- ── HEADER ── -->
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
         <div>
-          <div style="font-size:12px;color:var(--text3);font-weight:600;margin-bottom:6px;">${selectedDate}</div>
+          <div style="font-size:12px;color:var(--text3);font-weight:600;margin-bottom:6px;">${selectedDate} ${planOnly?'<span class="badge badge-gold" style="margin-left:6px;">PLAN DAY</span>':''}</div>
 
-          ${!hasTrade ? `
-            <div style="display:inline-block;padding:5px 10px;background:var(--gold-dim);border:1px solid rgba(245,200,66,0.28);border-radius:20px;font-size:10px;font-weight:800;color:var(--gold);letter-spacing:.8px;margin-bottom:8px;">PLAN DAY</div>
-            <div style="font-family:var(--head);font-size:26px;font-weight:800;color:var(--gold);letter-spacing:-.4px;">No P&L uploaded yet</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.6;">You can save note and chart URL first. Later manual entry or CSV upload will update this same date and keep these details.</div>
+          ${planOnly ? `
+            <div style="font-family:var(--head);font-size:30px;font-weight:800;letter-spacing:-0.8px;color:var(--gold);">No P&L yet</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.6;">You can save note and chart URL now. Later manual P&L or CSV upload will update this same date.</div>
           ` : hasBrok ? `
             <!-- Show both gross and net when brokerage entered -->
             <div style="font-size:11px;color:var(--text3);font-weight:500;margin-bottom:2px;">Gross P&L</div>
-            <div style="font-family:var(--head);font-size:22px;font-weight:700;letter-spacing:-0.5px;color:${d.pnl>=0?'var(--green)':'var(--red)'};text-decoration:line-through;opacity:0.5;">${fmtPnl(d.pnl)}</div>
+            <div style="font-family:var(--head);font-size:22px;font-weight:700;letter-spacing:-0.5px;color:${pnl>=0?'var(--green)':'var(--red)'};text-decoration:line-through;opacity:0.5;">${fmtPnl(pnl)}</div>
             <div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
               <div style="font-size:11px;color:var(--red);">− ${fmtInr(brokerage)} brokerage</div>
             </div>
             <div style="font-size:11px;color:var(--text3);font-weight:500;margin-bottom:2px;">Net P&L</div>
             <div style="font-family:var(--head);font-size:34px;font-weight:800;letter-spacing:-1px;color:${netPnl>=0?'var(--green)':'var(--red)'};">${fmtPnl(netPnl)}</div>
           ` : `
-            <div style="font-family:var(--head);font-size:34px;font-weight:800;letter-spacing:-1px;color:${d.pnl>=0?'var(--green)':'var(--red)'};">${fmtPnl(d.pnl)}</div>
+            <div style="font-family:var(--head);font-size:34px;font-weight:800;letter-spacing:-1px;color:${d.pnl>=0?'var(--green)':'var(--red)'};">${fmtPnl(pnl)}</div>
             <div style="font-size:11px;color:var(--text3);margin-top:3px;">Add brokerage below to see net P&L</div>
           `}
-          ${hasTrade ? `<div style="font-size:12px;color:var(--text3);font-weight:500;margin-top:6px;">${d.trades} instruments · ${d.rawCount} fills</div>` : ''}
+          <div style="font-size:12px;color:var(--text3);font-weight:500;margin-top:6px;">${planOnly?'PLAN DAY · No P&L yet':(trades+' instruments · '+rawCount+' fills')}</div>
         </div>
         <button class="del-btn" data-delete="${selectedDate}">Delete</button>
       </div>
 
-      ${hasTrade ? `
       <!-- ── STATS ROW ── -->
       <div style="display:flex;gap:8px;margin-bottom:16px;">
         <div style="flex:1;background:var(--bg2);border-radius:10px;padding:11px;text-align:center;">
@@ -2057,7 +2045,7 @@ function renderDayDetail(){
         </div>
         <div style="flex:1;background:var(--bg2);border-radius:10px;padding:11px;text-align:center;">
           <div style="font-size:9px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Fills</div>
-          <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--text2);">${d.rawCount}</div>
+          <div style="font-family:var(--head);font-size:14px;font-weight:700;color:var(--text2);">${rawCount}</div>
         </div>
       </div>
 
@@ -2101,7 +2089,7 @@ function renderDayDetail(){
             <div style="padding-top:10px;border-top:1px solid var(--border);">
               <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;">
                 <span style="color:var(--text3);">Gross P&L</span>
-                <span style="color:${d.pnl>=0?'var(--green)':'var(--red)'};font-weight:600;">${fmtPnl(d.pnl)}</span>
+                <span style="color:${d.pnl>=0?'var(--green)':'var(--red)'};font-weight:600;">${fmtPnl(pnl)}</span>
               </div>
               <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;">
                 <span style="color:var(--text3);">Total Charges</span>
@@ -2122,7 +2110,9 @@ function renderDayDetail(){
 
       <!-- ── INSTRUMENTS ── -->
       <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Instruments</div>
-      ${(d.rows||[]).map(r=>`
+      ${(!d.rows||!d.rows.length) ? `
+        <div style="padding:14px;background:var(--bg2);border:1px dashed var(--border2);border-radius:12px;color:var(--text3);font-size:12px;text-align:center;margin-bottom:8px;">No instruments yet — update with manual P&L or CSV later.</div>
+      ` : (d.rows||[]).map(r=>`
         <div class="inst-row">
           <div style="flex:1;min-width:0;">
             <div style="font-size:13px;color:var(--text);font-weight:600;margin-bottom:3px;">${shortSym(r.sym)}</div>
@@ -2134,12 +2124,6 @@ function renderDayDetail(){
           </div>
         </div>
       `).join('')}
-
-      ` : `
-      <div style="background:var(--bg2);border:1px dashed rgba(245,200,66,0.35);border-radius:14px;padding:14px;margin-bottom:16px;font-size:12px;color:var(--text2);line-height:1.7;">
-        📌 This date is saved as a planning day. Add notes/charts now; upload CSV or use Manual P&amp;L Entry later to fill P&amp;L.
-      </div>
-      `}
 
       <!-- ── CHARTS ── -->
       <div style="margin-top:18px;margin-bottom:4px;">
@@ -2179,12 +2163,12 @@ function renderDayDetail(){
             ${chartRow('chart-custom',  'Custom Chart', '📊', '#3B82F6', charts.custom  ||'', selectedDate)}
           ` : ''}
 
-          <div id="chart-autosave-status" style="font-size:10px;color:var(--green);text-align:right;min-height:14px;margin-top:4px;"></div>
           <button onclick="saveCharts('${selectedDate}')"
-            style="width:100%;margin-top:6px;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);">
+            style="width:100%;margin-top:10px;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);">
             💾 Save Charts
           </button>
-          <div style="font-size:10px;color:var(--text3);margin-top:8px;text-align:center;">
+          <div id="chart-autosave-status" style="font-size:10px;color:var(--text3);margin-top:8px;text-align:center;min-height:14px;"></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px;text-align:center;">
             TradingView → Share → Copy link → paste above
           </div>
         </div>
@@ -2205,7 +2189,7 @@ function renderDayDetail(){
             id="day-note"
             placeholder="Write rough notes here… e.g: nifty broke 24000, took ce at 150, sl hit at 120, missed banknifty setup, revenge trade on sensex lost 5k, need to wait more"
             style="width:100%;min-height:110px;background:transparent;border:none;outline:none;font-size:13px;color:var(--text);font-family:var(--font);line-height:1.7;resize:vertical;"
-            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';handleNoteTyping('${selectedDate}');"
+            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';autoSaveNote('${selectedDate}');"
           >${note}</textarea>
 
           <!-- AI Polish section -->
@@ -2227,7 +2211,8 @@ function renderDayDetail(){
           </div>
 
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:10px;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap;">
-            <span style="font-size:11px;color:var(--text3);" id="note-char">${note.length} chars</span><span style="font-size:11px;color:var(--green);" id="note-autosave-status"></span>
+            <span style="font-size:11px;color:var(--text3);" id="note-char">${note.length} chars</span>
+            <span id="note-autosave-status" style="font-size:11px;color:var(--text3);min-width:92px;"></span>
             <div style="display:flex;gap:6px;">
               <button id="polish-btn-${selectedDate}" onclick="polishNote('${selectedDate}')"
                 style="padding:8px 14px;background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(99,102,241,0.15));border:1px solid rgba(139,92,246,0.35);border-radius:8px;font-size:11px;font-weight:700;color:#a78bfa;cursor:pointer;font-family:var(--font);">
@@ -2256,11 +2241,11 @@ function renderDayDetail(){
 }
 
 function renderAllDays(){
-  const entries=Object.entries(journal).filter(([,d])=>hasDayContent(d)).sort(([a],[b])=>b.localeCompare(a));
+  const entries=Object.entries(journal).sort(([a],[b])=>b.localeCompare(a));
 
   // -- Consecutive loss alert --
   let consLoss=0, consList=[];
-  for(const [date,d] of tradeEntries().sort(([a],[b])=>b.localeCompare(a))){
+  for(const [date,d] of Object.entries(journal).sort(([a],[b])=>b.localeCompare(a))){
     if(netOf(d)<0){ consLoss++; consList.push(date); } else break;
   }
   const alertHTML = consLoss>=2 ? `
@@ -2685,7 +2670,7 @@ function openDay(date){
 function renderAnalytics(){
   const el = document.getElementById('analytics-content');
   if(!el) return;
-  const entries = tradeEntries().sort(([a],[b])=>a.localeCompare(b));
+  const entries = Object.entries(journal).sort(([a],[b])=>a.localeCompare(b));
 
   if(entries.length < 3){
     el.innerHTML=`<div style="text-align:center;color:var(--text3);padding:40px 0;">
@@ -3156,31 +3141,30 @@ function analyseNotes(){
 }
 
 function renderAllDays(){
-  const entries=Object.entries(journal).filter(([,d])=>hasDayContent(d)).sort(([a],[b])=>b.localeCompare(a));
+  const entries=Object.entries(journal).sort(([a],[b])=>b.localeCompare(a));
   if(!entries.length){
     document.getElementById('all-days-list').innerHTML=`
       <div style="text-align:center;color:var(--text3);padding:32px 0;">
         <div style="font-size:40px;margin-bottom:14px;">📋</div>
-        <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:6px;">No journal days yet</div>
-        <div style="font-size:12px;margin-bottom:18px;">Select any trading date to add notes/chart URLs, or upload your first CSV.</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:6px;">No trades yet</div>
+        <div style="font-size:12px;margin-bottom:18px;">Upload your first Fyers CSV to get started</div>
         <button class="btn-gold" style="width:auto;padding:12px 28px;" onclick="showScreen('upload',document.querySelectorAll('.nav-item')[1])">Upload CSV</button>
       </div>`;
     return;
   }
   document.getElementById('all-days-list').innerHTML=`
-    <div class="section-label">All Journal Days</div>
+    <div class="section-label">All Trading Days</div>
     ${entries.map(([date,data])=>{
       const brok = data.brokerage||0;
-      const net  = netOf(data);
-      const hasTrade = isTradeDay(data);
-      const hasCharts = Object.values(data.charts||{}).some(Boolean);
-      return`<div data-date="${date}" style="display:flex;align-items:center;padding:14px 16px;background:var(--card);border:1px solid ${hasTrade?'var(--border)':'rgba(245,200,66,0.25)'};border-radius:14px;margin-bottom:8px;cursor:pointer;transition:all .12s;">
+      const net  = data.pnl - brok;
+      return`<div data-date="${date}" style="display:flex;align-items:center;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;cursor:pointer;transition:all .12s;">
         <div style="flex:1;">
-          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px;">${date} ${!hasTrade?'<span style="font-size:10px;color:var(--gold);">PLAN</span>':''}</div>
-          <div style="font-size:11px;color:var(--text3);font-weight:500;">${hasTrade ? `${data.trades} instruments · ${data.rawCount} fills${brok>0?` · <span style="color:var(--red);">−${fmtInr(brok)} charges</span>`:''}` : `${data.note?'📝 note ':''}${hasCharts?'📊 chart ':''}waiting for P&L`}</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px;">${date}</div>
+          <div style="font-size:11px;color:var(--text3);font-weight:500;">${data.trades} instruments · ${data.rawCount} fills${brok>0?` · <span style="color:var(--red);">−${fmtInr(brok)} charges</span>`:''}</div>
         </div>
         <div style="text-align:right;">
-          ${hasTrade ? `${brok>0?`<div style="font-size:10px;color:var(--text3);text-decoration:line-through;opacity:0.5;">${fmtPnl(data.pnl,true)}</div>`:''}<div style="font-family:var(--head);font-size:17px;font-weight:700;color:${net>=0?'var(--green)':'var(--red)'};">${fmtPnl(net,true)}</div>` : `<div style="font-family:var(--head);font-size:13px;font-weight:700;color:var(--gold);">No P&L</div>`}
+          ${brok>0?`<div style="font-size:10px;color:var(--text3);text-decoration:line-through;opacity:0.5;">${fmtPnl(data.pnl,true)}</div>`:''}
+          <div style="font-family:var(--head);font-size:17px;font-weight:700;color:${net>=0?'var(--green)':'var(--red)'};">${fmtPnl(net,true)}</div>
         </div>
       </div>`;
     }).join('')}
@@ -3188,32 +3172,46 @@ function renderAllDays(){
 }
 
 function deleteDay(date){
-  // Custom modal instead of confirm() which is blocked in sandboxed iframes
-  const modal=document.getElementById('confirm-modal');
-  document.getElementById('confirm-msg').textContent='Delete this trading day?';
-  document.getElementById('confirm-sub').textContent=date;
-  modal.classList.add('show');
+  if(!date || !journal[date]) return;
 
-  function doDelete(){
-    modal.classList.remove('show');
+  function finishDelete(){
     delete journal[date];
     saveJournal();
-    if(selectedDate===date) selectedDate=null;
+    if(selectedDate === date) selectedDate = null;
     renderCalendar();
     renderTopStats();
+    renderRecent();
+    if(typeof renderManualEntryRecent === 'function') renderManualEntryRecent();
+    if(typeof renderSettingsScreen === 'function') renderSettingsScreen();
+    showToast('🗑️ Date entry deleted');
   }
-  function cancel(){ modal.classList.remove('show'); }
 
-  // Remove old listeners and add fresh ones
-  const okBtn=document.getElementById('confirm-ok');
-  const cancelBtn=document.getElementById('confirm-cancel');
-  const newOk=okBtn.cloneNode(true);
-  const newCancel=cancelBtn.cloneNode(true);
-  okBtn.parentNode.replaceChild(newOk,okBtn);
-  cancelBtn.parentNode.replaceChild(newCancel,cancelBtn);
-  newOk.addEventListener('click',doDelete);
-  newCancel.addEventListener('click',cancel);
-  modal.addEventListener('click',function(e){ if(e.target===modal) cancel(); },{once:true});
+  // Use custom modal when present. Fallback to browser confirm for older/local copies.
+  const modal = document.getElementById('confirm-modal');
+  const msg = document.getElementById('confirm-msg');
+  const sub = document.getElementById('confirm-sub');
+  const okBtn = document.getElementById('confirm-ok');
+  const cancelBtn = document.getElementById('confirm-cancel');
+
+  if(!modal || !msg || !sub || !okBtn || !cancelBtn){
+    if(confirm('Delete this date entry?\n\n' + date)) finishDelete();
+    return;
+  }
+
+  msg.textContent = 'Delete this date entry?';
+  sub.textContent = date + ' — this removes the manual/plan day, note and chart URLs for this date only.';
+  okBtn.textContent = 'Delete';
+  modal.classList.add('show');
+
+  const newOk = okBtn.cloneNode(true);
+  const newCancel = cancelBtn.cloneNode(true);
+  okBtn.parentNode.replaceChild(newOk, okBtn);
+  cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+
+  function close(){ modal.classList.remove('show'); }
+  newOk.addEventListener('click', function(){ close(); finishDelete(); }, {once:true});
+  newCancel.addEventListener('click', close, {once:true});
+  modal.addEventListener('click', function(e){ if(e.target === modal) close(); }, {once:true});
 }
 
 // ======================================================
@@ -3398,7 +3396,7 @@ function updateManualTotal(){ renderManualChargesForm(); }
 
 
 function renderRecent(){
-  const entries=tradeEntries().sort(([a],[b])=>b.localeCompare(a)).slice(0,5);
+  const entries=Object.entries(journal).sort(([a],[b])=>b.localeCompare(a)).slice(0,5);
   const el=document.getElementById('recent-imports');
   if(!entries.length){el.innerHTML='';return;}
   el.innerHTML=`<div class="section-label">Recent Imports</div>${entries.map(([date,data])=>`
@@ -3436,7 +3434,7 @@ function mthsToTarget(sc){const j=buildJourney(sc);const h=j.find(m=>m.end>=TARG
 
 // How many calendar months since first trade
 function getMonthsElapsed(){
-  const keys=tradeEntries().map(([k])=>k).sort();
+  const keys=Object.keys(journal).sort();
   if(!keys.length) return 0;
   const first=new Date(keys[0]);
   const now=new Date();
@@ -3494,7 +3492,7 @@ function renderPlanHero(){
   if(goalLbl) goalLbl.textContent = CURR_SYMBOL+fmtL(TARGET)+' GOAL';
 
   // Actual capital from journal — only reinvested portion is in account
-  const days=tradeValues();
+  const days=Object.values(journal);
   const actualNet = calcAccountBalance();
   const pct=Math.min((actualNet/TARGET)*100,100);
   document.getElementById('plan-progress').style.width=Math.max(pct,3)+'%';
@@ -3514,7 +3512,7 @@ function renderPlanHero(){
 
   // -- Actual calendar today --
   const todayKey  = new Date().toISOString().slice(0,10);
-  const todayPnl  = isTradeDay(journal[todayKey]) ? netOf(journal[todayKey]) : null;
+  const todayPnl  = journal[todayKey] ? netOf(journal[todayKey]) : null;
   const todayPct  = todayPnl !== null ? Math.min((todayPnl / dailyGoal)*100, 150) : null;
 
   // -- Current week Mon–Sun --
@@ -3523,7 +3521,7 @@ function renderPlanHero(){
   const diffToMon = (dow===0) ? -6 : 1-dow;
   const weekStart = new Date(now); weekStart.setDate(now.getDate()+diffToMon); weekStart.setHours(0,0,0,0);
   const weekEnd   = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6);
-  const weekEntries2 = tradeEntries().filter(([k])=>{
+  const weekEntries2 = Object.entries(journal).filter(([k])=>{
     const d=new Date(k); return d>=weekStart && d<=weekEnd;
   });
   const weekPnl    = weekEntries2.reduce((s,[,d])=>s+netOf(d),0);
@@ -3531,13 +3529,13 @@ function renderPlanHero(){
 
   // -- This calendar month --
   const nowKey     = new Date().toISOString().slice(0,7);
-  const monthEntries = tradeEntries().filter(([k])=>k.startsWith(nowKey));
+  const monthEntries = Object.entries(journal).filter(([k])=>k.startsWith(nowKey));
   const monthPnl   = monthEntries.reduce((s,[,d])=>s+netOf(d),0);
   const monthPct   = Math.min((monthPnl/monthlyGoal)*100,150);
 
   // -- This Financial Year (Apr–Mar) --
   const fy          = getFYRange();
-  const yearEntries = tradeEntries().filter(([k])=>inFY(k));
+  const yearEntries = Object.entries(journal).filter(([k])=>inFY(k));
   const yearPnl     = yearEntries.reduce((s,[,d])=>s+netOf(d),0);
   const yearPct     = Math.min((yearPnl/yearlyGoal)*100,150);
 
@@ -3835,7 +3833,7 @@ function renderPlan(){
 //  STATS SCREEN — all net of brokerage
 // ======================================================
 function renderStats(){
-  const days=tradeValues();
+  const days=Object.values(journal);
   if(!days.length){
     document.getElementById('stats-content').innerHTML=`
       <div style="text-align:center;color:var(--text3);padding:40px 0;">
@@ -3867,10 +3865,10 @@ function renderStats(){
   const planCap = getPlanCapNow(sc);
 
   // Period calcs
-  const sortedE   = tradeEntries().sort(([a],[b])=>b.localeCompare(a));
+  const sortedE   = Object.entries(journal).sort(([a],[b])=>b.localeCompare(a));
   // -- Actual today --
   const todayKey2 = new Date().toISOString().slice(0,10);
-  const todayD    = isTradeDay(journal[todayKey2]) ? journal[todayKey2] : null;
+  const todayD    = journal[todayKey2];
   const todayG    = todayD?(todayD.pnl||0):0;
   const todayB    = todayD?(todayD.brokerage||0):0;
   const todayN    = todayG-todayB;
@@ -3879,25 +3877,25 @@ function renderStats(){
   const dow2  = now2.getDay();
   const wkS   = new Date(now2); wkS.setDate(now2.getDate()+((dow2===0)?-6:1-dow2)); wkS.setHours(0,0,0,0);
   const wkE   = new Date(wkS); wkE.setDate(wkS.getDate()+6);
-  const weekE2= tradeEntries().filter(([k])=>{ const d=new Date(k); return d>=wkS&&d<=wkE; });
+  const weekE2= Object.entries(journal).filter(([k])=>{ const d=new Date(k); return d>=wkS&&d<=wkE; });
   const weekG = weekE2.reduce((s,[,d])=>s+(d.pnl||0),0);
   const weekB = weekE2.reduce((s,[,d])=>s+(d.brokerage||0),0);
   const weekN = weekG-weekB;
   const nowMo     = new Date().toISOString().slice(0,7);
-  const moE       = tradeEntries().filter(([k])=>k.startsWith(nowMo));
+  const moE       = Object.entries(journal).filter(([k])=>k.startsWith(nowMo));
   const moG       = moE.reduce((s,[,d])=>s+(d.pnl||0),0);
   const moB       = moE.reduce((s,[,d])=>s+(d.brokerage||0),0);
   const moN       = moG-moB;
   // -- This Financial Year (Apr–Mar) --
   const fy2   = getFYRange();
-  const yrE   = tradeEntries().filter(([k])=>inFY(k));
+  const yrE   = Object.entries(journal).filter(([k])=>inFY(k));
   const yrG   = yrE.reduce((s,[,d])=>s+(d.pnl||0),0);
   const yrB   = yrE.reduce((s,[,d])=>s+(d.brokerage||0),0);
   const yrN   = yrG-yrB;
 
   // Monthly table
   const byMonth={};
-  tradeEntries().forEach(([date,d])=>{
+  Object.entries(journal).forEach(([date,d])=>{
     const key=date.slice(0,7);
     if(!byMonth[key]) byMonth[key]={gross:0,brok:0,net:0,days:0,wins:0};
     byMonth[key].gross+=(d.pnl||0); byMonth[key].brok+=(d.brokerage||0);
@@ -3908,7 +3906,7 @@ function renderStats(){
   const monthKeys4stats=Object.keys(byMonth).sort();
   let runCap=INITIAL_CAPITAL;
   // Find which calendar month index each trading month corresponds to
-  const firstTradeDate = tradeEntries().map(([k])=>k).sort()[0];
+  const firstTradeDate = Object.keys(journal).sort()[0];
   const firstTradeMonth = firstTradeDate ? new Date(firstTradeDate) : new Date();
 
   const monthRows=monthKeys4stats.map((key,i)=>{
@@ -4588,7 +4586,7 @@ function renderPrediction(){
     {label:CURR_SYMBOL+fmtL(TARGET), emoji:'🏆', val:TARGET},
   ];
 
-  const totalNet = tradeValues().reduce((s,d)=>s+netOf(d),0);
+  const totalNet = Object.values(journal).reduce((s,d)=>s+netOf(d),0);
 
   el.innerHTML = `
     <!-- Divider -->
@@ -5047,27 +5045,21 @@ function saveManualEntry(){
 
   const pnl = manualEntrySide==='loss' ? -Math.abs(pnlRaw) : Math.abs(pnlRaw);
 
-  const existing = journal[date] || {};
-  if(journal[date] && isTradeDay(journal[date]) && !confirm('A trading day for '+date+' already exists. Overwrite P&L details? Notes and chart URLs will be kept.')) return;
-
+  const oldDay = journal[date] || {};
   const rows = manualInstruments.map(sym=>({sym, buyQty:0, sellQty:0, avgBuy:0, avgSell:0, pnl: pnl/Math.max(manualInstruments.length,1)}));
 
   journal[date] = {
-    ...existing,
+    ...oldDay,
     pnl:      Math.round(pnl),
-    brokerage: Math.round(brok || existing.brokerage || 0),
+    brokerage: Math.round(brok),
     trades:   manualInstruments.length || 1,
     rawCount: manualInstruments.length || 1,
     rows,
-    charts: existing.charts || {},
-    note: note || existing.note || '',
-    highlighted: existing.highlighted || false,
-    special: existing.special || false,
-    polishedNote: existing.polishedNote || '',
-    noteUpdatedAt: existing.noteUpdatedAt,
+    note: note || oldDay.note || '',
+    charts: oldDay.charts || {},
     manual: true,
-    noteOnly:false,
-    noTrade:false,
+    planned:false,
+    source:'manual',
     updatedAt:new Date().toISOString()
   };
 
@@ -5094,22 +5086,49 @@ function saveManualEntry(){
   setTimeout(()=>{ if(status) status.textContent=''; }, 3000);
 }
 
+function editManualEntry(date){
+  const d = journal[date];
+  if(!d) return;
+  switchUploadTab('manual');
+  const dateEl = document.getElementById('manual-entry-date');
+  const pnlEl  = document.getElementById('manual-entry-pnl');
+  const brokEl = document.getElementById('manual-entry-brok');
+  const noteEl = document.getElementById('manual-entry-note');
+  if(dateEl) dateEl.value = date;
+  manualEntrySide = Number(d.pnl||0) < 0 ? 'loss' : 'profit';
+  setManualSide(manualEntrySide);
+  if(pnlEl)  pnlEl.value  = Math.abs(Number(d.pnl||0)) || '';
+  if(brokEl) brokEl.value = Math.abs(Number(d.brokerage||0)) || '';
+  if(noteEl) noteEl.value = d.note || '';
+  manualInstruments = (d.rows||[]).map(r=>r.sym).filter(Boolean);
+  renderManualInstrumentTags();
+  updateManualEntryPreview();
+  const status = document.getElementById('me-status');
+  if(status){ status.style.color='var(--gold)'; status.textContent='Editing '+date+' — press Add to Journal to update'; }
+  const panel = document.getElementById('panel-manual');
+  if(panel) panel.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
 function renderManualEntryRecent(){
   const el = document.getElementById('me-recent');
   if(!el) return;
-  const entries = tradeEntries().filter(([,d])=>d.manual).sort(([a],[b])=>b.localeCompare(a)).slice(0,5);
+  const entries = Object.entries(journal).filter(([,d])=>d.manual || d.planned).sort(([a],[b])=>b.localeCompare(a)).slice(0,10);
   if(!entries.length){ el.innerHTML=''; return; }
-  const sym = CURR_SYMBOL||'\u20b9';
-  el.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">\u270f\ufe0f Recent Manual Entries</div>'+
-    entries.map(([date,d])=>{
-      const net = d.pnl-(d.brokerage||0);
-      return '<div style="display:flex;align-items:center;padding:12px 14px;background:var(--card);border:1px solid rgba(139,92,246,0.2);border-radius:12px;margin-bottom:8px;">'+
-        '<div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--text);">'+date+' <span style="font-size:10px;color:#a78bfa;">\u270f\ufe0f manual</span></div>'+
-        '<div style="font-size:11px;color:var(--text3);">'+(d.rows?.map(r=>r.sym).filter(Boolean).join(' \u00b7 ')||'\u2014')+'</div></div>'+
-        '<div style="font-family:var(--head);font-size:16px;font-weight:700;color:'+(net>=0?'var(--green)':'var(--red)')+';">'+(net>=0?'+':'')+sym+Math.abs(net).toLocaleString()+'</div></div>';
+  const sym = CURR_SYMBOL||'₹';
+  el.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">✏️ Recent Manual / Plan Entries</div>'+    entries.map(([date,d])=>{
+      const net = Number(d.pnl||0)-Number(d.brokerage||0);
+      const isPlan = isPlanOnlyDay(d);
+      const rowSyms = (d.rows||[]).map(r=>r.sym).filter(Boolean).join(' · ');
+      const desc = rowSyms || (d.note ? '📝 note saved' : (d.charts && Object.values(d.charts).some(Boolean) ? '📊 chart URL saved' : '—'));
+      return '<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;background:var(--card);border:1px solid rgba(139,92,246,0.2);border-radius:12px;margin-bottom:8px;">'+
+        '<div data-date="'+date+'" style="flex:1;cursor:pointer;min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--text);">'+date+' <span style="font-size:10px;color:#a78bfa;">'+(isPlan?'PLAN':'✏️ manual')+'</span></div>'+ 
+        '<div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+desc+'</div></div>'+ 
+        '<div style="font-family:var(--head);font-size:16px;font-weight:700;color:'+(isPlan?'var(--gold)':(net>=0?'var(--green)':'var(--red)'))+';">'+(isPlan?'PLAN':((net>=0?'+':'')+sym+Math.abs(net).toLocaleString()))+'</div>'+ 
+        '<button type="button" onclick="editManualEntry(\''+date+'\')" class="btn-ghost" style="padding:7px 10px;min-width:44px;">Edit</button>'+ 
+        '<button type="button" data-delete="'+date+'" class="btn-ghost" style="padding:7px 10px;min-width:44px;color:var(--red);border-color:#4A1A1A;">Delete</button>'+ 
+        '</div>';
     }).join('');
 }
-
 // Wrap init in DOMContentLoaded to ensure DOM is ready
 function initApp(){
   loadMarketMode();  // load mode first so storage keys correct
